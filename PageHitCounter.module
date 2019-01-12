@@ -1,0 +1,565 @@
+<?php namespace Processwire;
+
+/**
+ * @author  FlipZoom Media Inc. - David Karich
+ * @contact David Karich <david@flipzoom.de>
+ * @website www.kostaldesign.com
+ * @create  2019-01-10
+ * @style   Tab size: 4 / Soft tabs: YES
+ * ----------------------------------------------------------------------------------
+ * @licence
+ * Copyright (c) 2019 FlipZoom Media Inc. - David Karich
+ * Permission is hereby granted, free of charge, to any person obtaining a copy 
+ * of this software and associated documentation files (the "Software"), to deal 
+ * in the Software without restriction, including without limitation the rights 
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell 
+ * copies of the Software, and to permit persons to whom the Software is furnished 
+ * to do so, subject to the following conditions: The above copyright notice and 
+ * this permission notice shall be included in all copies or substantial portions 
+ * of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, 
+ * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
+ * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+ * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION 
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
+ * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ * ----------------------------------------------------------------------------------
+ */
+
+class PageHitCounter extends WireData implements Module, ConfigurableModule {
+
+    /**
+     * ------------------------------------------------------------------------
+     * Define database tables
+     * ------------------------------------------------------------------------
+     */
+    const PHCDBTABLE        = 'modules_hit_counter';
+
+    /**
+     * ------------------------------------------------------------------------
+     * Define cookie name
+     * ------------------------------------------------------------------------
+     */
+    const PHCCOOKIE         = 'phc-';
+
+    /**
+     * ------------------------------------------------------------------------
+     * Default module info
+     * ------------------------------------------------------------------------
+     * @return array
+     */
+    public static function getModuleinfo() {
+        return array(
+            'title'         => __('Page Hit Counter'),
+            'summary'       => __('The Page Hit Counter module implements a simple page view counter. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views. Even if the page is cached. Also works with ProCache and AdBockers. With a lightweight tracking code of 490 bytes (gzipped). In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.'),
+            'author'        => 'David Karich - FlipZoom Media Inc.',
+            'href'          => 'https://www.flipzoom.de',
+            'singular'      => true,
+            'autoload'      => true,
+            'icon'          => 'eye', 
+            'version'       => 100, 
+            'requires'      => array('ProcessWire>=3.0.0', 'PHP>=5.6')
+        );
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Default configuration values
+     * ------------------------------------------------------------------------
+     * @return array
+     */
+    public static function getDefaultConfig() {
+        return array(
+            'forTemplates'              => array(), 
+            'thousandSeperator'         => '.', 
+            'sessionLifetime'           => 1200, 
+            'ipFilter'                  => '', 
+            'botFilter'                 => 1, 
+            'customAttributes'          => 'defer', 
+            'customSalt'                => ''
+        );
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Populate default configuration (will be overwritten after constructor 
+     * with user's own configuration)
+     * ------------------------------------------------------------------------
+     * @return object
+     */
+    public function __construct() {
+        foreach(self::getDefaultConfig() as $key => $value) {
+            $this->$key = $value;
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Build module configuration page
+     * ------------------------------------------------------------------------
+     * @param  array  $data
+     * @return mixed
+     */
+    static public function getModuleConfigInputfields(array $data) {
+        
+        // ------------------------------------------------------------------------
+        // Init vars
+        // ------------------------------------------------------------------------
+        $modules        = wire('modules');
+        $input          = wire('input');
+        $pwTemplates    = wire('templates');
+
+        // ------------------------------------------------------------------------
+        // Build template array and exlude system templates
+        // ------------------------------------------------------------------------
+        foreach($pwTemplates as $template) {
+            if($template->flags AND Template::flagSystem) continue;
+            $templates[] = $template;
+        }
+
+        // ------------------------------------------------------------------------
+        // Merge default config settings (custom values overwrite defaults)
+        // ------------------------------------------------------------------------
+        $defaults   = self::getDefaultConfig();
+        $data       = array_merge($defaults, $data);
+
+        // ------------------------------------------------------------------------
+        // On save actions
+        // ------------------------------------------------------------------------
+        if($input->post->submit_save_module) {
+            $forTemplates       = (array) $input->post->forTemplates;
+            $thousandSeperator  = (string) $input->post->thousandSeperator;
+            $sessionLifetime    = (int) $input->post->sessionLifetime;
+            $ipFilter           = (string) $input->post->ipFilter;
+            $botFilter          = (int) $input->post->botFilter;
+            $customAttributes   = (string) $input->post->customAttributes;
+        }
+
+        // ------------------------------------------------------------------------
+        // Build config screen form
+        // ------------------------------------------------------------------------
+        $form = new InputfieldWrapper();
+
+            // ------------------------------------------------------------------------
+            // Template select
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldAsmSelect");
+            $field->name            = "forTemplates";
+            $field->label           = __("Templates for tracking");
+            $field->icon            = "cubes";
+            $field->columnWidth     = '100';
+            $field->description     = __("Select one or more templates, which should automatically have a hit counter and be tracked in the frontend.");
+            $field->notes           = __("For the selected templates, a lightweight tracking script is injected before the closing </body> tag.");
+            foreach($templates as $template) $field->addOption($template->name);
+            $field->value           = $data['forTemplates'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Session lifetime for counting
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldText");
+            $field->name            = "sessionLifetime";
+            $field->label           = __("Session lifetime in seconds");
+            $field->icon            = "clock-o";
+            $field->columnWidth     = '50';
+            $field->required        = 1;
+            $field->description     = __("During this period, repeated page views of the same page and by the same visitor are not counted as page view.");
+            $field->notes           = __("Default: 1200 seconds. Corresponds to a session duration of 20 minutes.");
+            $field->value           = ($data['sessionLifetime'] <= 0) ? 1200 : $data['sessionLifetime'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Bot filter
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "botFilter";
+            $field->label           = __("Bot filter");
+            $field->checkboxLabel   = __("Enable bot filter");
+            $field->icon            = "android";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['botFilter']) ? 'checked' : '';
+            $field->description     = __("Should page views, which in the UserAgent give the definition Bot, Crawler or Spider for recognition, be filtered automatically?");
+            $field->notes           = __("If no UserAgent can be extracted, the view is still counted.");
+            $field->value           = $data['botFilter'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Custom attributes for tracking script
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldText");
+            $field->name            = "customAttributes";
+            $field->label           = __("Tracking script attributes");
+            $field->icon            = "code";
+            $field->columnWidth     = '50';
+            $field->description     = __("Add additional atrributs to the tracking script tag. \"defer\" should be included so that the tracking code is not executed until the DOM is ready. This will not block the page rendering.");
+            $field->notes           = __("For example: defer data-myattribute=\"my-value\"");
+            $field->value           = $data['customAttributes'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Thousand seperator
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldText");
+            $field->name            = "thousandSeperator";
+            $field->label           = __("Thousands seperator");
+            $field->icon            = "ellipsis-h";
+            $field->columnWidth     = '50';
+            $field->description     = __("For better readability of numbers, a thousand separator can be defined.");
+            $field->notes           = __("For example , or . or a space.");
+            $field->value           = $data['thousandSeperator'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Custom IP filter
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldTextarea");
+            $field->name            = "ipFilter";
+            $field->label           = __("Custom IP filter");
+            $field->icon            = "filter";
+            $field->columnWidth     = '100';
+            $field->rows            = 5;
+            $field->description     = __("A list of IP addresses that should be excluded from tracking. This is useful, for example, if CronJobs run across the page which should not be counted as visitors. One IP address per line.");
+            $field->value           = $data['ipFilter'];
+            $form->add($field);
+
+        // ------------------------------------------------------------------------
+        // Build form
+        // ------------------------------------------------------------------------
+        return $form;
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Init module
+     * ------------------------------------------------------------------------
+     * @return mixed
+     */
+    public function init() {
+
+        // ------------------------------------------------------------------------
+        // Add scripts and styles
+        // ------------------------------------------------------------------------
+        wire('config')->styles->add($this->config->urls->PageHitCounter . 'PageHitCounter.min.css');
+
+        // ------------------------------------------------------------------------
+        // Only attach hooks if templates are configured
+        // ------------------------------------------------------------------------
+        if(WireCount($this->forTemplates) > 0) {
+            
+            $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
+            $this->addHookAfter("Page::render", $this, 'insertAutomaticHitCounterTracking');
+
+            if(isset($_SERVER['REQUEST_URI']) AND strlen($_SERVER['REQUEST_URI']) - strlen('/phcv1') === strrpos($_SERVER['REQUEST_URI'], '/phcv1')) {
+                $this->addHookBefore("ProcessPageView::pageNotFound", $this, "trackPageView");
+            }
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Track pahe view from frontend AJAX call
+     * ------------------------------------------------------------------------
+     * @param  HookEvent $event
+     */
+    protected function trackPageView(HookEvent $event) {
+
+        // ------------------------------------------------------------------------
+        // If no AJAX request, exit
+        // ------------------------------------------------------------------------
+        if(empty($_SERVER['HTTP_X_REQUESTED_WITH']) OR strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') exit();
+    
+        // ------------------------------------------------------------------------
+        // Init page ID or exit if no ID given
+        // ------------------------------------------------------------------------
+        $pageID         = $this->sanitizer->int($this->input->post->pageID);
+        if(!ctype_digit($pageID)) exit();
+        $pageID         = $this->sanitizer->selectorValue($pageID);
+
+        // ------------------------------------------------------------------------
+        // Validate IP adress
+        // ------------------------------------------------------------------------
+        if(!$this->checkIP($this->session->getIP())) exit();
+
+        // ------------------------------------------------------------------------
+        // Validate UserAgent / Bot filter
+        // ------------------------------------------------------------------------
+        if(!$this->checkBot()) exit();
+
+        // ------------------------------------------------------------------------
+        // Load target page
+        // ------------------------------------------------------------------------
+        $trackedPage    = $this->pages->findOne("id={$pageID}");
+
+        // ------------------------------------------------------------------------
+        // Check for right template
+        // ------------------------------------------------------------------------
+        if($trackedPage->id AND in_array((string) $trackedPage->template->name, $this->forTemplates)) {
+
+            // ------------------------------------------------------------------------
+            // Check for session lifetime
+            // ------------------------------------------------------------------------
+            if(!$this->checkCookie($trackedPage->id)) exit();
+
+            // ------------------------------------------------------------------------
+            // Build SQL query
+            // ------------------------------------------------------------------------
+            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`page_id`, `page_counter`) VALUES (:page_id, 1) ON DUPLICATE KEY UPDATE `page_counter` = page_counter + 1;";
+
+            // ------------------------------------------------------------------------
+            // Execute SQL
+            // ------------------------------------------------------------------------
+            try {
+                $query = $this->database->prepare($sql);
+                $query->bindValue(':page_id', $pageID);
+                $query->execute();
+
+            } catch(Exception $e) {
+                $this->log->error($e->getMessage());
+                exit();
+            }
+        }
+
+        // ------------------------------------------------------------------------
+        // Exit before 404
+        // ------------------------------------------------------------------------
+        exit();
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Check UserAgent for bot, spider and crawler signature
+     * ------------------------------------------------------------------------
+     * @return boolean
+     */
+    private function checkBot() {
+        
+        // ------------------------------------------------------------------------
+        // If function is disabled, return
+        // ------------------------------------------------------------------------
+        if(!$this->botFilter) return true;
+
+        // ------------------------------------------------------------------------
+        // Check Usergent for bot signature
+        // ------------------------------------------------------------------------
+        if(isset($_SERVER['HTTP_USER_AGENT'])) { 
+            $useragent = $this->sanitizer->text($_SERVER['HTTP_USER_AGENT']);
+            if(preg_match('/(bot|crawl|spider)/i', $useragent)) return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Validates and filter IP adress
+     * ------------------------------------------------------------------------
+     * @param  string $ip
+     * @return boolean
+     */
+    private function checkIP($ip) {
+        
+        // ------------------------------------------------------------------------
+        // Basic IP check
+        // ------------------------------------------------------------------------
+        if(!$ip OR !filter_var($ip, FILTER_VALIDATE_IP)) return false;
+
+        // ------------------------------------------------------------------------
+        // Check IP for custom filter list
+        // ------------------------------------------------------------------------
+        if(!empty($this->ipFilter)) {
+            $customIPs = array_unique(explode("\n", $this->ipFilter), SORT_REGULAR);
+            $customIPs = (is_array($customIPs)) ? $customIPs : array($this->ipFilter);
+            $customIPs = array_map('trim', $customIPs);
+
+            if(in_array($ip, $customIPs)) return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Check cookie and lifetime for page view
+     * ------------------------------------------------------------------------
+     * @param  int    $pageID
+     * @return boolean
+     */
+    private function checkCookie($pageID) {
+
+        // ------------------------------------------------------------------------
+        // Get cookie
+        // ------------------------------------------------------------------------
+        $cookie = $this->input->cookie(self::PHCCOOKIE . $pageID);
+
+        // ------------------------------------------------------------------------
+        // If no cookie exist, create it and return true for tracking
+        // ------------------------------------------------------------------------
+        if($cookie === NULL) {
+            setcookie(self::PHCCOOKIE . $pageID, 1, time() + $this->sessionLifetime);
+            return true;
+
+        // ------------------------------------------------------------------------
+        // Else return false for do not track the hit
+        // ------------------------------------------------------------------------
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Build tracking code injection if auto load option is enabled for 
+     * given template
+     * ------------------------------------------------------------------------
+     * @param  HookEvent $event
+     * @return mixed
+     */
+    protected function insertAutomaticHitCounterTracking(HookEvent $event) {
+        if(in_array((string) $event->object->template, $this->forTemplates) AND (string) $event->object->template !== 'admin') {
+            $content        = $event->return;
+            $content        = str_replace('<body', '<body data-phc="'. (int) $event->object->id .'"', $content);
+            $content        = str_replace('</body>', $this->buildTrackingCode() . '</body>', $content);
+            $event->return  = $content;
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Build tracking code for frontend
+     * ------------------------------------------------------------------------
+     * @return string
+     */
+    private function buildTrackingCode() {
+        $trackingFile = ($this->config->debug) ? "PageHitCounter.js" : "PageHitCounter.min.js";
+        return (string) "<script {$this->customAttributes} src='{$this->config->urls->PageHitCounter}{$trackingFile}'></script>";
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Build hit counter for admin page tree on given and allowed templates
+     * ------------------------------------------------------------------------
+     * @param HookEvent $event
+     */
+    protected function addPageListHitCounter(HookEvent $event) {
+
+        // ------------------------------------------------------------------------
+        // Get current requested page
+        // ------------------------------------------------------------------------
+        $page = $event->arguments('page');
+        if(isset($event->arguments[1]) && $event->arguments[1]['noTags']) return;
+
+        // ------------------------------------------------------------------------
+        // If current page template ist not allowed, return
+        // ------------------------------------------------------------------------
+        if(!in_array($page->template->name, $this->forTemplates)) return;
+
+        // ------------------------------------------------------------------------
+        // Else get hits and return event
+        // ------------------------------------------------------------------------
+        $hits           = $this->getHitsFromDB((int) $page->id);
+        $event->return  = $this->buildPageListHitCounter((int) $hits) . $event->return;
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Get hit counter for given page as int or 0
+     * ------------------------------------------------------------------------
+     * @param  int $pageID
+     * @return int
+     */
+    private function getHitsFromDB($pageID) {
+
+        // ------------------------------------------------------------------------
+        // Init page_id
+        // ------------------------------------------------------------------------
+        $pageID = $this->sanitizer->int($pageID);
+        if(!ctype_digit($pageID)) return (int) 0;
+
+        // ------------------------------------------------------------------------
+        // Build SQL query
+        // ------------------------------------------------------------------------
+        $sql    = "SELECT `page_counter` FROM `". self::PHCDBTABLE ."` WHERE `page_id` = :page_id LIMIT 1;";
+
+        // ------------------------------------------------------------------------
+        // Execute SQL
+        // ------------------------------------------------------------------------
+        try {
+            $query = $this->database->prepare($sql);
+            $query->bindValue(':page_id', $pageID);
+            $query->execute();
+
+        } catch(Exception $e) {
+            $this->log->error($e->getMessage());
+            $this->error($e->getMessage());
+        }
+
+        // ------------------------------------------------------------------------
+        // If counter exists, return counter value
+        // ------------------------------------------------------------------------
+        if($query->rowCount() > 0) {
+            $result = $query->fetch(\PDO::FETCH_ASSOC);
+            return (int) $result['page_counter'];
+
+        // ------------------------------------------------------------------------
+        // Else insert new entry and return 0
+        // ------------------------------------------------------------------------
+        } else {
+            return (int) 0;
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Formats the counter for the admin page tree.
+     * ------------------------------------------------------------------------
+     * @param  int $number Number of views
+     * @return string      Formated counter for admin page tree list
+     */
+    private function buildPageListHitCounter($number) {
+        $_counter = number_format($number, 0, ',', $this->thousandSeperator);
+        return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') ."'>
+                    <span class='pageListHitCounter'>
+                        <i class='icon fa fa-fw fa-eye'></i>". $_counter ."
+                    </span>
+                </div>";
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Install module and database table
+     * ------------------------------------------------------------------------
+     */
+    public function ___install() {
+
+        // ------------------------------------------------------------------------
+        // Create new counter table for module
+        // ------------------------------------------------------------------------
+        $sql = "CREATE TABLE IF NOT EXISTS `". self::PHCDBTABLE ."` (
+                    `page_id` int(10) unsigned NOT NULL, 
+                    `page_counter` int(10) unsigned DEFAULT '0', 
+                    PRIMARY KEY (`page_id`), 
+                    UNIQUE KEY `page_id` (`page_id`) 
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
+        
+        // ------------------------------------------------------------------------
+        // Execute SQL
+        // ------------------------------------------------------------------------
+        try {
+            $this->database->exec($sql);
+
+        } catch(Exception $e) {
+            $this->log->error($e->getMessage());
+            $this->error($e->getMessage());
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Uninstall module and database table
+     * ------------------------------------------------------------------------
+     */
+    public function ___uninstall() {}
+}
+
+?>
