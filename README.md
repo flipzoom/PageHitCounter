@@ -21,6 +21,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - Filtering of IPs and bots possible
 - Works with all admin themes
 - When the module is uninstalled, the counter data is preserved
+- Counter database is created as write-optimized InnoDB
 - No dependencies on Librarys, pure VanillaJS
 
 ### Cons
@@ -30,3 +31,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 ### Planned Features
 - API access for formatted frontend output
 - Permissions for backend (Who is allowed to see the counter)
+
+### Changelog
+1.0.0
+- Initial release
