@@ -23,9 +23,12 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - When the module is uninstalled, the counter data is preserved
 - Counter database is created as write-optimized InnoDB
 - No dependencies on Librarys, pure VanillaJS
+- Works in all modern browsers
 
 ### Cons
 - Only for Processwire version 3.x or higher
+- Only for PHP version 5.6.x or higher
+- No support for Internet Explorer version 6-9
 - No historical data, just simple summation (Because of GDPR)
 
 ### Planned Features
