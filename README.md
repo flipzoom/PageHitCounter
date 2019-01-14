@@ -35,6 +35,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 ### Planned Features
 - API access for formatted frontend output
 - Permissions for backend (Who is allowed to see the counter)
+- Possibility of sorting by number of hits
 
 ### Changelog
 1.0.0
