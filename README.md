@@ -1,5 +1,5 @@
 # Processwire Page Hit Counter
-![alt text](https://github.com/FlipZoomMedia/PageHitCounter/blob/master/pagehitcounter-example.png)
+![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/pagehitcounter-example.png)
 ## Simple Page View Tracking
 
 The Page Hit Counter module for processwire implements a simple page view counter in backend. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views.
