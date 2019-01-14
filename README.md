@@ -27,7 +27,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - Works in all modern browsers
 
 ### Cons
-- Only for Processwire version 3.x or higher
+- Only for Processwire version 3.0.80 or higher (Requires wireCount())
 - Only for PHP version 5.6.x or higher
 - No support for Internet Explorer version 6-9
 - No historical data, just simple summation (Because of GDPR)
