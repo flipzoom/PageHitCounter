@@ -1,4 +1,4 @@
-<?php namespace Processwire;
+<?php namespace ProcessWire;
 
 /**
  * @author  FlipZoom Media Inc. - David Karich
@@ -59,7 +59,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'autoload'      => true,
             'icon'          => 'eye', 
             'version'       => 100, 
-            'requires'      => array('ProcessWire>=3.0.0', 'PHP>=5.6')
+            'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6')
         );
     }
 
@@ -245,7 +245,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Only attach hooks if templates are configured
         // ------------------------------------------------------------------------
-        if(WireCount($this->forTemplates) > 0) {
+        if(wireCount($this->forTemplates) > 0) {
             
             $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
             $this->addHookAfter("Page::render", $this, 'insertAutomaticHitCounterTracking');
