@@ -520,8 +520,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // Check Usergent for bot signature
         // ------------------------------------------------------------------------
         if(isset($_SERVER['HTTP_USER_AGENT'])) { 
-            $useragent = $this->sanitizer->text($_SERVER['HTTP_USER_AGENT']);
-            if(preg_match('/(bot|crawl|spider)/i', $useragent)) return false;
+            $useragent  = $this->sanitizer->text($_SERVER['HTTP_USER_AGENT']);
+            $botlist    = preg_replace("/\r|\n/", "", file_get_contents(__DIR__ . "/botlist.txt"));
+            if(preg_match("/({$botlist})/i", $useragent)) return false;
         }
 
         return true;
