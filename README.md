@@ -10,6 +10,15 @@ Works with `ProCache` and `AdBockers`. With a lightweight tracking code of only 
 
 In addition, there are some options, for example filtering IP addresses (for CronJobs) and filtering bots, spiders and crawlers. You can also configure the lifetime of the session cookies. Repeated page views are not counted during this period. It is also possible to exclude certain roles from tracking. For example, logged in editors who work on a page are not counted as page views.
 
+![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/pagehitcounter-config.png)
+
+### Sort by hits
+Each trackable template has an additional field called `phits`. For example, you want to output all news sorted by the number of page views.
+```php
+// It is assumed that the template, e.g. with the name "news", has been configured for tracking.
+$news = $pages->find("template=news, sort=-phits");
+```
+
 ### Pros
 - Automatic PageView Tracking
 - Lightweight tracking code, only 490 bytes (gzipped)
@@ -21,10 +30,9 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - Exclude certain roles from tracking
 - Ability to reset Page Views
 - Works with all admin themes
-- When the module is uninstalled, the counter data is preserved
-- Counter database is created as write-optimized InnoDB
 - No dependencies on Librarys, pure VanillaJS
 - Works in all modern browsers
+- Pages are sortable by hits
 
 ### Cons
 - Only for Processwire version 3.0.80 or higher (Requires wireCount())
@@ -34,12 +42,15 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 
 ### Planned Features
 - API access for formatted frontend output
-- Possibility to sort the pages by hits (Request by Zeka)
+- ~~Possibility to sort the pages by hits~~ (Request by Zeka) `Since version 1.2.0`
 - ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Better bot filter~~ `Since version 1.1.0`
 
 ### Changelog
+1.2.0
+- New feature: Sort pages by hits – New field `phits`
+
 1.1.0
 - New feature: Exclude tracking of certain roles
 - New feature: Reset Page Views
