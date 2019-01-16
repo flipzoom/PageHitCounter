@@ -1,0 +1,16 @@
+bot|crawl|spider|robot|
+screenshot|simplepie|
+facebook|google|search|
+addthis|ahrefs|amazon|
+biglotron|buck|scraper|scaper|
+cloudflare|bing|baidu|semalt|
+disqus|embedly|feedly|fetch|flipboard|
+genieo|gigablast|jetty|jetslide|scan|
+metauri|miniflux|moreover|muckrack|ning|
+phantomjs|pocketparser|slak|snacktory|
+teoma|thinklab|tineye|traackr|trove|
+twurly|upflow|yahoo|yeti|zabbix|axios|
+binlar|coccoc|curl|deadlinkchecker|
+ezooms|eright|findthatfile|fluffy|
+heritrix|newspaper|page2rss|postrank|
+speedy|summify|wget|yandex|yanga|zgrab|whatsapp
