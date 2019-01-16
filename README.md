@@ -34,7 +34,6 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 
 ### Planned Features
 - API access for formatted frontend output
-- Permissions for backend (Who is allowed to see the counter)
 - Possibility to sort the pages by hits (Request by Zeka)
 - ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
