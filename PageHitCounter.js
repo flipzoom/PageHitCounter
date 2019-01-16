@@ -87,7 +87,7 @@
     PHC.sendHit = function(pageID) {
         if(!isNaN(pageID)) {
             var xhr = new XMLHttpRequest();
-            xhr.open('POST', "/phcv1");
+            xhr.open('POST', location.pathname.substring(1) + "/phcv1");
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
             xhr.onload = function() {
