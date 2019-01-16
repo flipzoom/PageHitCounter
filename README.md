@@ -39,6 +39,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - Don't track logged in users or exclude certain roles (Request by wbmnfktr)
 - Possibility to reset the counter for certain pages or templates (Request by wbmnfktr)
 - Better bot filter
+- Better Anti-AdBlock: Hashed tracking script and custom id
 
 ### Changelog
 1.0.0
