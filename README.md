@@ -19,6 +19,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - GDPR compliant, session-based cookie only, no personal information
 - Filtering of IPs and bots possible
 - Exclude certain roles from tracking
+- Ability to reset Page Views
 - Works with all admin themes
 - When the module is uninstalled, the counter data is preserved
 - Counter database is created as write-optimized InnoDB
@@ -36,7 +37,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - Permissions for backend (Who is allowed to see the counter)
 - Possibility to sort the pages by hits (Request by Zeka)
 - ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
-- Possibility to reset the counter for certain pages or templates (Request by wbmnfktr)
+- ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
 - Better bot filter
 - Better Anti-AdBlock: Hashed tracking script and custom id
 
