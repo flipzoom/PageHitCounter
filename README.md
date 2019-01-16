@@ -6,11 +6,9 @@ The Page Hit Counter module for processwire implements a simple page view counte
 
 This gives you a quick overview of how many visitors have read a news or a blog post, for example, without first having to open complex tools such as Google Analytics. This module quickly provides simple information, e.g. for editors.
 
-Works with *ProCache* and *AdBockers*. With a lightweight tracking code of only 490 bytes (gzipped). And no code changes necessary!
+Works with *ProCache* and *AdBockers*. With a lightweight tracking code of only 490 bytes (gzipped). And no code changes necessary! In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.
 
-In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.
-
-In addition, there are some options, for example filtering IP addresses (for CronJobs) and filtering bots, spiders and crawlers. You can also configure the lifetime of the session cookies. Repeated page views are not counted during this period.
+In addition, there are some options, for example filtering IP addresses (for CronJobs) and filtering bots, spiders and crawlers. You can also configure the lifetime of the session cookies. Repeated page views are not counted during this period. It is also possible to exclude certain roles from tracking. For example, logged in editors who work on a page are not counted as page views.
 
 ### Pros
 - Automatic PageView Tracking
@@ -20,6 +18,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - Works with browser AdBlockers
 - GDPR compliant, session-based cookie only, no personal information
 - Filtering of IPs and bots possible
+- Exclude certain roles from tracking
 - Works with all admin themes
 - When the module is uninstalled, the counter data is preserved
 - Counter database is created as write-optimized InnoDB
