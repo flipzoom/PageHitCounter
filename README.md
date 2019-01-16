@@ -42,5 +42,8 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - Better Anti-AdBlock: Hashed tracking script and custom id
 
 ### Changelog
+1.1.0
+- New feature: Exclude tracking of certain roles
+- New Function: Reset Page Views
 1.0.0
 - Initial release
