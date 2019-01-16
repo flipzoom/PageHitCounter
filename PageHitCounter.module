@@ -34,7 +34,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * Define database tables
      * ------------------------------------------------------------------------
      */
-    const PHCDBTABLE        = 'modules_hit_counter';
+    const PHCDBTABLE        = 'field_phits';
+    const PHCFIELDNAME      = 'phits';
 
     /**
      * ------------------------------------------------------------------------
@@ -58,8 +59,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 110, 
-            'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6')
+            'version'       => 120, 
+            'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
+            'installs'      => array('FieldtypePageHitCounter')
         );
     }
 
@@ -152,6 +154,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             if($input->post->resetSelector !== "") {
                 $modules->get("PageHitCounter")->resetPageViews((string) $input->post->resetSelector, (int) $input->post->dryRun);
             }
+
+            // ------------------------------------------------------------------------
+            // Add phit field to selected templates
+            // ------------------------------------------------------------------------
+            $modules->get("PageHitCounter")->addCounterField($forTemplates);
         }
 
         // ------------------------------------------------------------------------
@@ -346,6 +353,47 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
+     * Add phit field to selected templates
+     * ------------------------------------------------------------------------
+     * @param array $toTemplates
+     */
+    private function addCounterField($toTemplates) {
+
+        // ------------------------------------------------------------------------
+        // Init vars
+        // ------------------------------------------------------------------------
+        $templates = wire('templates');
+
+        // ------------------------------------------------------------------------
+        // Add field to templates
+        // ------------------------------------------------------------------------
+        if(wireCount($toTemplates) > 0) {
+            foreach($toTemplates as $toTemplate) {
+                $t = $templates->get("{$toTemplate}");
+                if($t->id) {
+                    if(!$t->hasField(self::PHCFIELDNAME)) {
+                        $t->fields->add(self::PHCFIELDNAME);
+                        $t->fields->save();
+                    }
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------------
+        // Remove phits from non selected templates
+        // ------------------------------------------------------------------------
+        foreach($templates as $template) {
+            if(!in_array((string) $template->name, $toTemplates)) {
+                if($template->hasField(self::PHCFIELDNAME)) {
+                    $template->fields->remove(self::PHCFIELDNAME);
+                    $template->fields->save();
+                }
+            }
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
      * Reset page view by given selector
      * ------------------------------------------------------------------------
      * @param  string $pageSelector
@@ -377,7 +425,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // Select entries from counter table
             // ------------------------------------------------------------------------
             $ids    = implode(',', explode('|', $pageResults));
-            $sql    = "SELECT `page_id` FROM `". self::PHCDBTABLE ."` WHERE `page_id` IN ({$ids}) AND `page_counter` > 0;";
+            $sql    = "SELECT `pages_id` FROM `". self::PHCDBTABLE ."` WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
             $query  = $database->prepare($sql);
             $query->execute();
             
@@ -398,7 +446,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                 // ------------------------------------------------------------------------
                 } else {
 
-                    $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `page_counter` = 0 WHERE `page_id` IN ({$ids}) AND `page_counter` > 0;";
+                    $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `data` = 0 WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
                     $query  = $database->prepare($sql);
                     $query->execute();
                     $returnResult = $resultAmount . " " . __("pages have been reseted.");
@@ -481,7 +529,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             // Build SQL query
             // ------------------------------------------------------------------------
-            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`page_id`, `page_counter`) VALUES (:page_id, 1) ON DUPLICATE KEY UPDATE `page_counter` = page_counter + 1;";
+            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`pages_id`, `data`) VALUES (:page_id, 1) ON DUPLICATE KEY UPDATE `data` = data + 1;";
 
             // ------------------------------------------------------------------------
             // Execute SQL
@@ -635,56 +683,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Else get hits and return event
         // ------------------------------------------------------------------------
-        $hits           = $this->getHitsFromDB((int) $page->id);
-        $event->return  = $this->buildPageListHitCounter((int) $hits) . $event->return;
-    }
-
-    /**
-     * ------------------------------------------------------------------------
-     * Get hit counter for given page as int or 0
-     * ------------------------------------------------------------------------
-     * @param  int $pageID
-     * @return int
-     */
-    private function getHitsFromDB($pageID) {
-
-        // ------------------------------------------------------------------------
-        // Init page_id
-        // ------------------------------------------------------------------------
-        $pageID = $this->sanitizer->int($pageID);
-        if(!ctype_digit($pageID)) return (int) 0;
-
-        // ------------------------------------------------------------------------
-        // Build SQL query
-        // ------------------------------------------------------------------------
-        $sql    = "SELECT `page_counter` FROM `". self::PHCDBTABLE ."` WHERE `page_id` = :page_id LIMIT 1;";
-
-        // ------------------------------------------------------------------------
-        // Execute SQL
-        // ------------------------------------------------------------------------
-        try {
-            $query = $this->database->prepare($sql);
-            $query->bindValue(':page_id', $pageID);
-            $query->execute();
-
-        } catch(Exception $e) {
-            $this->log->error($e->getMessage());
-            $this->error($e->getMessage());
-        }
-
-        // ------------------------------------------------------------------------
-        // If counter exists, return counter value
-        // ------------------------------------------------------------------------
-        if($query->rowCount() > 0) {
-            $result = $query->fetch(\PDO::FETCH_ASSOC);
-            return (int) $result['page_counter'];
-
-        // ------------------------------------------------------------------------
-        // Else insert new entry and return 0
-        // ------------------------------------------------------------------------
-        } else {
-            return (int) 0;
-        }
+        $event->return = $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME)) . $event->return;
     }
 
     /**
@@ -705,30 +704,102 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
+     * Upgrade module and schema
+     * ------------------------------------------------------------------------
+     * @param  int $fromVersion 
+     * @param  int $toVersion   
+     */
+    public function ___upgrade($fromVersion, $toVersion) {
+
+        // ------------------------------------------------------------------------
+        // Rebuild new databse schema, install fieldtype and import old data
+        // ------------------------------------------------------------------------
+        if($fromVersion <= 110 AND $toVersion == 120) {
+
+            // ------------------------------------------------------------------------
+            // Init vars
+            // ------------------------------------------------------------------------
+            $fields     = wire('fields');
+            $modules    = wire('modules');
+
+            if(!$modules->isInstalled("FieldtypePageHitCounter")) {
+                $modules->install("FieldtypePageHitCounter");
+            }
+
+            // ------------------------------------------------------------------------
+            // Create and install hit counter field type
+            // ------------------------------------------------------------------------
+            if(!$fields->get(self::PHCFIELDNAME)) {
+                $field              = new Field;
+                $field->type        = $this->modules->get("FieldtypePageHitCounter");
+                $field->name        = self::PHCFIELDNAME;
+                $field->label       = __("Page hits");
+                $field->flags       = 0;
+                $field->collapsed   = 4;
+                $field->tags        = "-pagehits";
+                $field->icon        = 'eye';
+                $field->save();
+            }
+
+            // ------------------------------------------------------------------------
+            // Add phits to templates
+            // ------------------------------------------------------------------------
+            if(wireCount($this->forTemplates) > 0) {
+                $this->addCounterField($this->forTemplates);
+            }
+
+            // ------------------------------------------------------------------------
+            // Write old counter stats to new phits field
+            // ------------------------------------------------------------------------
+            $sql    = "SELECT * FROM `modules_hit_counter` WHERE `page_id` != 0;";
+            $query  = $this->database->prepare($sql);
+            $query->execute();
+
+            if($query->rowCount() > 0) {
+                $result = $query;
+                foreach($result as $entry) {
+                    $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`pages_id`, `data`) VALUES (:page_id, :counter) ON DUPLICATE KEY UPDATE `data` = :counter;";
+                    $query  = $this->database->prepare($sql);
+                    $query->bindValue(':page_id', $entry['page_id']);
+                    $query->bindValue(':counter', $entry['page_counter']);
+                    $query->execute();
+                }
+            }
+             
+            // ------------------------------------------------------------------------
+            // Delete old DB
+            // ------------------------------------------------------------------------
+            $sql    = "DROP TABLE `modules_hit_counter`;";
+            $query  = $this->database->prepare($sql);
+            $query->execute();
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
      * Install module and database table
      * ------------------------------------------------------------------------
      */
     public function ___install() {
 
         // ------------------------------------------------------------------------
-        // Create new counter table for module
+        // Init vars
         // ------------------------------------------------------------------------
-        $sql = "CREATE TABLE IF NOT EXISTS `". self::PHCDBTABLE ."` (
-                    `page_id` int(10) unsigned NOT NULL, 
-                    `page_counter` int(10) unsigned DEFAULT '0', 
-                    PRIMARY KEY (`page_id`), 
-                    UNIQUE KEY `page_id` (`page_id`) 
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
-        
-        // ------------------------------------------------------------------------
-        // Execute SQL
-        // ------------------------------------------------------------------------
-        try {
-            $this->database->exec($sql);
+        $fields     = wire('fields');
 
-        } catch(Exception $e) {
-            $this->log->error($e->getMessage());
-            $this->error($e->getMessage());
+        // ------------------------------------------------------------------------
+        // Create and install hit counter field type
+        // ------------------------------------------------------------------------
+        if(!$fields->get(self::PHCFIELDNAME)) {
+            $field              = new Field;
+            $field->type        = $this->modules->get("FieldtypePageHitCounter");
+            $field->name        = self::PHCFIELDNAME;
+            $field->label       = __("Page hits");
+            $field->flags       = 0;
+            $field->collapsed   = 4;
+            $field->tags        = "-pagehits";
+            $field->icon        = 'eye';
+            $field->save();
         }
     }
 
@@ -737,7 +808,34 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * Uninstall module and database table
      * ------------------------------------------------------------------------
      */
-    public function ___uninstall() {}
+    public function ___uninstall() {
+
+        // ------------------------------------------------------------------------
+        // Init vars
+        // ------------------------------------------------------------------------
+        $fields     = wire('fields');
+        $templates  = wire('templates');
+        $modules    = wire('modules');
+
+        // ------------------------------------------------------------------------
+        // Remove phits from templates
+        // ------------------------------------------------------------------------
+        foreach($templates as $template) {
+            if(!$template->hasField(self::PHCFIELDNAME)) continue;
+            $template->fields->remove(self::PHCFIELDNAME);
+            $template->fields->save();
+        }
+
+        // ------------------------------------------------------------------------
+        // Delete field
+        // ------------------------------------------------------------------------
+        $fields->delete($fields->get(self::PHCFIELDNAME));
+
+        // ------------------------------------------------------------------------
+        // Uninstall fieldtype counter
+        // ------------------------------------------------------------------------
+        $modules->uninstall('FieldtypePageHitCounter');        
+    }
 }
 
 ?>
