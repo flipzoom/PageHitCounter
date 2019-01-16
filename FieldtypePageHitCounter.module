@@ -39,7 +39,7 @@ class FieldtypePageHitCounter extends Fieldtype {
         return array(
             'title'         => __('Page Hit Counter Selector Field'),
             'summary'       => __('This field is needed to provide page views as selector for sorting.'), 
-            'version'       => 110, 
+            'version'       => 120, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6', 'PageHitCounter')
         );
     }
@@ -70,7 +70,7 @@ class FieldtypePageHitCounter extends Fieldtype {
 
     /**
      * ------------------------------------------------------------------------
-     * Return databse schema on install
+     * Return database schema on install
      * ------------------------------------------------------------------------
      * @param  Field  $field 
      * @return String        
