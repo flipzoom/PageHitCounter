@@ -38,6 +38,7 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 - Possibility to sort the pages by hits (Request by Zeka)
 - Don't track logged in users or exclude certain roles (Request by wbmnfktr)
 - Possibility to reset the counter for certain pages or templates (Request by wbmnfktr)
+- Better bot filter
 
 ### Changelog
 1.0.0
