@@ -3,7 +3,7 @@
 /**
  * @author  FlipZoom Media Inc. - David Karich
  * @contact David Karich <david@flipzoom.de>
- * @website www.flipzoom.de
+ * @website www.kostaldesign.com
  * @create  2019-01-10
  * @style   Tab size: 4 / Soft tabs: YES
  * ----------------------------------------------------------------------------------
@@ -58,7 +58,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 100, 
+            'version'       => 110, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6')
         );
     }
@@ -77,7 +77,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'ipFilter'                  => '', 
             'botFilter'                 => 1, 
             'customAttributes'          => 'defer', 
-            'customSalt'                => ''
+            'forRoles'                  => array()
         );
     }
 
@@ -109,6 +109,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         $modules        = wire('modules');
         $input          = wire('input');
         $pwTemplates    = wire('templates');
+        $pwRoles        = wire('roles');
+        $session        = wire('session');
+        $resetResult    = $session->get('resetResult');
 
         // ------------------------------------------------------------------------
         // Build template array and exlude system templates
@@ -116,6 +119,13 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         foreach($pwTemplates as $template) {
             if($template->flags AND Template::flagSystem) continue;
             $templates[] = $template;
+        }
+
+        // ------------------------------------------------------------------------
+        // Build roles array
+        // ------------------------------------------------------------------------
+        foreach($pwRoles as $role) {
+            $roles[] = $role;
         }
 
         // ------------------------------------------------------------------------
@@ -134,6 +144,14 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $ipFilter           = (string) $input->post->ipFilter;
             $botFilter          = (int) $input->post->botFilter;
             $customAttributes   = (string) $input->post->customAttributes;
+            $forRoles           = (array) $input->post->forRoles;
+
+            // ------------------------------------------------------------------------
+            // Performe counter reset
+            // ------------------------------------------------------------------------
+            if($input->post->resetSelector !== "") {
+                $modules->get("PageHitCounter")->resetPageViews((string) $input->post->resetSelector, (int) $input->post->dryRun);
+            }
         }
 
         // ------------------------------------------------------------------------
@@ -211,6 +229,19 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $form->add($field);
 
             // ------------------------------------------------------------------------
+            // Role select
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldAsmSelect");
+            $field->name            = "forRoles";
+            $field->label           = __("Exclude roles of logged in users");
+            $field->icon            = "user-circle-o";
+            $field->columnWidth     = '100';
+            $field->description     = __("Logged-in users who are assigned one of the following roles are excluded from tracking. For example, working editors are not counted as page views.");
+            foreach($roles as $role) $field->addOption($role->name);
+            $field->value           = $data['forRoles'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
             // Custom IP filter
             // ------------------------------------------------------------------------
             $field                  = $modules->get("InputfieldTextarea");
@@ -222,6 +253,63 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->description     = __("A list of IP addresses that should be excluded from tracking. This is useful, for example, if CronJobs run across the page which should not be counted as visitors. One IP address per line.");
             $field->value           = $data['ipFilter'];
             $form->add($field);
+
+                // ------------------------------------------------------------------------
+                // Reset counter per selector
+                // ------------------------------------------------------------------------
+                $fieldset               = $modules->get("InputfieldFieldset");
+                $fieldset->name         = "resetCounter";
+                $fieldset->collapsed    = ($resetResult) ? Inputfield::collapsedNo : Inputfield::collapsedYes;
+                $fieldset->label        = __("Reset Page Views");
+                $fieldset->description  = __("Here you have the possibility to reset all page views for a certain selector to 0. Before you execute it, you can start a dry run.");
+                $fieldset->icon         = "eraser";
+                $fieldset->columnWidth  = '100';
+
+                    // ------------------------------------------------------------------------
+                    // Selector
+                    // ------------------------------------------------------------------------
+                    $field                  = $modules->get("InputfieldText");
+                    $field->name            = "resetSelector";
+                    $field->label           = __("Custom page selector");
+                    $field->icon            = "database";
+                    $field->columnWidth     = '70';
+                    $field->description     = __("Enter here the ProcessWire page selector on which pages and/or templates a counter should be reset.");
+                    $field->notes           = __("For example: \"template=news\" or \"id=123|456|789\". If you have many pages, use limits in your selectors before triggering a timeout.");
+                    $field->value           = "";
+                    $fieldset->add($field);
+
+                    // ------------------------------------------------------------------------
+                    // Dry run
+                    // ------------------------------------------------------------------------
+                    $field                  = $modules->get("InputfieldCheckbox");
+                    $field->name            = "dryRun";
+                    $field->label           = __("Dry run");
+                    $field->checkboxLabel   = __("Perform a dry run");
+                    $field->icon            = "exclamation-triangle";
+                    $field->columnWidth     = '30';
+                    $field->checked         = 'checked';
+                    $field->description     = __("Activate the dry run option for a test.");
+                    $field->notes           = __("If this option is activated, no data records are changed.");
+                    $field->value           = 1;
+                    $fieldset->add($field);
+
+                    // ------------------------------------------------------------------------
+                    // Reset results
+                    // ------------------------------------------------------------------------
+                    if($resetResult) {
+                        $field                  = $modules->get("InputfieldMarkup");
+                        $field->name            = "resetResult";
+                        $field->icon            = "info-circle";
+                        $field->label           = __("Result after reset");
+                        $field->value           = "<span class='resetResultInfo'>". $resetResult ."</span>";
+                        $fieldset->add($field);
+                        $session->remove('resetResult');
+                    }
+
+                // ------------------------------------------------------------------------
+                // Add fieldset to form
+                // ------------------------------------------------------------------------
+                $form->add($fieldset);
 
         // ------------------------------------------------------------------------
         // Build form
@@ -245,7 +333,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Only attach hooks if templates are configured
         // ------------------------------------------------------------------------
-        if(wireCount($this->forTemplates) > 0) {
+        if(WireCount($this->forTemplates) > 0) {
             
             $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
             $this->addHookAfter("Page::render", $this, 'insertAutomaticHitCounterTracking');
@@ -254,6 +342,86 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                 $this->addHookBefore("ProcessPageView::pageNotFound", $this, "trackPageView");
             }
         }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Reset page view by given selector
+     * ------------------------------------------------------------------------
+     * @param  string $pageSelector
+     * @param  integer $dryRun
+     */
+    private function resetPageViews($pageSelector, $dryRun) {
+
+        // ------------------------------------------------------------------------
+        // Init vars
+        // ------------------------------------------------------------------------
+        $sanitizer      = wire('sanitizer');
+        $pages          = wire('pages');
+        $database       = wire('database');
+        $session        = wire('session');
+        $returnResult   = "";
+
+        // ------------------------------------------------------------------------
+        // Get page ids from selector
+        // ------------------------------------------------------------------------
+        $pageSelector   = wire('sanitizer')->text($pageSelector);
+        $pageResults    = wire('pages')->findMany("{$pageSelector}", array('getIds' => true));
+        
+        // ------------------------------------------------------------------------
+        // If pages found
+        // ------------------------------------------------------------------------
+        if($pageResults) {
+
+            // ------------------------------------------------------------------------
+            // Select entries from counter table
+            // ------------------------------------------------------------------------
+            $ids    = implode(',', explode('|', $pageResults));
+            $sql    = "SELECT `page_id` FROM `". self::PHCDBTABLE ."` WHERE `page_id` IN ({$ids}) AND `page_counter` > 0;";
+            $query  = $database->prepare($sql);
+            $query->execute();
+            
+            // ------------------------------------------------------------------------
+            // If records were found 
+            // ------------------------------------------------------------------------
+            if($query->rowCount() > 0) {
+                $resultAmount = $query->rowCount();
+
+                // ------------------------------------------------------------------------
+                // If it's just a dry run, return only the amount
+                // ------------------------------------------------------------------------
+                if($dryRun === 1) {
+                    $returnResult = $resultAmount . " " . __("pages would be affected by the change.");
+
+                // ------------------------------------------------------------------------
+                // Else reset the affected records to 0
+                // ------------------------------------------------------------------------
+                } else {
+
+                    $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `page_counter` = 0 WHERE `page_id` IN ({$ids}) AND `page_counter` > 0;";
+                    $query  = $database->prepare($sql);
+                    $query->execute();
+                    $returnResult = $resultAmount . " " . __("pages have been reseted.");
+                }
+
+            // ------------------------------------------------------------------------
+            // Else return info
+            // ------------------------------------------------------------------------
+            } else {
+                $returnResult = __("No pages would be affected by the change.");
+            }
+
+        // ------------------------------------------------------------------------
+        // Else return error
+        // ------------------------------------------------------------------------
+        } else {
+            $returnResult = __("No pages found. Check your selector.");
+        }
+
+        // ------------------------------------------------------------------------
+        // Set result in session var
+        // ------------------------------------------------------------------------
+        $session->set('resetResult', $returnResult);
     }
 
     /**
@@ -268,6 +436,15 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // If no AJAX request, exit
         // ------------------------------------------------------------------------
         if(empty($_SERVER['HTTP_X_REQUESTED_WITH']) OR strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') exit();
+
+        // ------------------------------------------------------------------------
+        // Exclude certain roles
+        // ------------------------------------------------------------------------
+        if($this->user->isLoggedin()) {
+            foreach($this->user->roles as $role) {
+                if(in_array((string) $role->name, $this->forRoles)) exit();
+            }
+        }
     
         // ------------------------------------------------------------------------
         // Init page ID or exit if no ID given
