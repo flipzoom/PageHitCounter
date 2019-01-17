@@ -59,6 +59,7 @@ echo $page->phits;
 - Change database engine to InnoDB for phits field
 - Option to disable session lifetime `set session lifetime to 0, no cookies`
 - Better installation check
+- Bug-Fix: No tracking on welcomepage (Reported by wbmnfktr; Thx to matjazp)
 
 1.2.0
 - New feature: Sort pages by hits – New field `phits`
