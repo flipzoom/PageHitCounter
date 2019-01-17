@@ -12,11 +12,15 @@ In addition, there are some options, for example filtering IP addresses (for Cro
 
 ![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/pagehitcounter-config.png)
 
-### Sort by hits
+## Sort by hits and access page views (hit value)
 Each trackable template has an additional field called `phits`. For example, you want to output all news sorted by the number of page views.
 ```php
 // It is assumed that the template, e.g. with the name "news", has been configured for tracking.
 $news = $pages->find("template=news, sort=-phits");
+```
+To output the page views of a tracked page, use:
+```php
+echo $page->phits;
 ```
 
 ### Pros
@@ -30,6 +34,7 @@ $news = $pages->find("template=news, sort=-phits");
 - Exclude certain roles from tracking
 - Ability to reset Page Views
 - Works with all admin themes
+- Counter database is created as write-optimized InnoDB
 - No dependencies on Librarys, pure VanillaJS
 - Works in all modern browsers
 - Pages are sortable by hits
@@ -41,13 +46,17 @@ $news = $pages->find("template=news, sort=-phits");
 - No historical data, just simple summation (Because of GDPR)
 
 ### Planned Features
-- API access for formatted frontend output
+- ~~API access to hit values~~ `Since version 1.2.1`
 - ~~Possibility to sort the pages by hits~~ (Request by Zeka) `Since version 1.2.0`
 - ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Better bot filter~~ `Since version 1.1.0`
 
 ### Changelog
+1.2.1
+- API access to hit values `Use $page->phits`
+- Change database engine to InnoDB for phits field
+
 1.2.0
 - New feature: Sort pages by hits – New field `phits`
 
@@ -58,3 +67,6 @@ $news = $pages->find("template=news, sort=-phits");
 
 1.0.0
 - Initial release
+
+#### Notes
+*By default, the page views are stored as `INT` in the database. This allows a maximum counter value of 4.2 billion views (4,294,967,295) per page. If you need more, change the type to `BIGINT` directly in the database. But I recommend to use Google Analytics or similar tools if you have such a large number of users.*
