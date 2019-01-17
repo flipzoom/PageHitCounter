@@ -64,7 +64,7 @@ echo $page->phits;
 - Enhancement: Better installation check
 - Enhancement: AJAX Request ansyncron
 - Enhancement: Reduction of the tracking script size by ~20%
-- Enhancement: Option to hide the counter in the page tree `You can also output the counter yourself with the field name "phits"`
+- Enhancement: Option to hide the counter in the page tree `You can output the counter with the field name "phits"`
 - Enhancement: Option for activate general IP validation
 
 1.2.0
