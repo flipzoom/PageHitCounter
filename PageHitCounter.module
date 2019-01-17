@@ -59,7 +59,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 120, 
+            'version'       => 121, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );
@@ -79,7 +79,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'ipFilter'                  => '', 
             'botFilter'                 => 1, 
             'customAttributes'          => 'defer', 
-            'forRoles'                  => array()
+            'forRoles'                  => array(), 
+            'showForBackend'            => 1,
+            'ipValidation'              => 1
         );
     }
 
@@ -147,6 +149,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $botFilter          = (int) $input->post->botFilter;
             $customAttributes   = (string) $input->post->customAttributes;
             $forRoles           = (array) $input->post->forRoles;
+            $showForBackend     = (int) $input->post->showForBackend;
+            $ipValidation       = (int) $input->post->ipValidation;
 
             // ------------------------------------------------------------------------
             // Performe counter reset
@@ -190,8 +194,23 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->columnWidth     = '50';
             $field->required        = 1;
             $field->description     = __("During this period, repeated page views of the same page and by the same visitor are not counted as page view.");
-            $field->notes           = __("Default: 1200 seconds. Corresponds to a session duration of 20 minutes.");
-            $field->value           = ($data['sessionLifetime'] <= 0) ? 1200 : $data['sessionLifetime'];
+            $field->notes           = __("Default: 1200s. Corresponds to a liftetime of 20 minutes. If you set the value to 0, no cookie is stored and every page view is counted.");
+            $field->value           = ((int) $data['sessionLifetime'] < 0) ? 1200 : $data['sessionLifetime'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Show counter in backend
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "showForBackend";
+            $field->label           = __("Show counter in page tree");
+            $field->checkboxLabel   = __("Show counter");
+            $field->icon            = "eye";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['showForBackend']) ? 'checked' : '';
+            $field->description     = __("Should a counter be displayed in the admin page tree?");
+            $field->notes           = __("You can also output the counter yourself with the field name \"phits\".");
+            $field->value           = $data['showForBackend'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -207,6 +226,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->description     = __("Should page views, which in the UserAgent give the definition Bot, Crawler or Spider for recognition, be filtered automatically?");
             $field->notes           = __("If no UserAgent can be extracted, the view is still counted.");
             $field->value           = $data['botFilter'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // General IP check
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "ipValidation";
+            $field->label           = __("General IP validation");
+            $field->checkboxLabel   = __("Enable IP validation");
+            $field->icon            = "heartbeat";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['ipValidation']) ? 'checked' : '';
+            $field->description     = __("Should a general check be performed for a triggered page view to determine whether the request originates from a valid IP address?");
+            $field->notes           = __("For this you need the PHP function \"filter_var()\".");
+            $field->value           = $data['ipValidation'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -230,8 +264,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->label           = __("Thousands seperator");
             $field->icon            = "ellipsis-h";
             $field->columnWidth     = '50';
-            $field->description     = __("For better readability of numbers, a thousand separator can be defined.");
-            $field->notes           = __("For example , or . or a space.");
+            $field->description     = __("For better readability of numbers, a thousand separator can be defined. This option only has an effect if you have activated the option \"Show counter in page tree\".");
+            $field->notes           = __("For example , or . or a space. Only for display in the page tree.");
             $field->value           = $data['thousandSeperator'];
             $form->add($field);
 
@@ -333,18 +367,26 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
     public function init() {
 
         // ------------------------------------------------------------------------
-        // Add scripts and styles
-        // ------------------------------------------------------------------------
-        wire('config')->styles->add($this->config->urls->PageHitCounter . 'PageHitCounter.min.css');
-
-        // ------------------------------------------------------------------------
         // Only attach hooks if templates are configured
         // ------------------------------------------------------------------------
         if(WireCount($this->forTemplates) > 0) {
             
-            $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
+            // ------------------------------------------------------------------------
+            // Show counter in page tree
+            // ------------------------------------------------------------------------
+            if($this->showForBackend) {
+                $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
+                wire('config')->styles->add($this->config->urls->PageHitCounter . 'PageHitCounter.min.css');
+            }
+
+            // ------------------------------------------------------------------------
+            // Attach hook for tracking script
+            // ------------------------------------------------------------------------
             $this->addHookAfter("Page::render", $this, 'insertAutomaticHitCounterTracking');
 
+            // ------------------------------------------------------------------------
+            // Attach hook for AJAX post request tracking
+            // ------------------------------------------------------------------------
             if(isset($_SERVER['REQUEST_URI']) AND strlen($_SERVER['REQUEST_URI']) - strlen('/phcv1') === strrpos($_SERVER['REQUEST_URI'], '/phcv1')) {
                 $this->addHookBefore("ProcessPageView::pageNotFound", $this, "trackPageView");
             }
@@ -486,23 +528,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         if(empty($_SERVER['HTTP_X_REQUESTED_WITH']) OR strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') exit();
 
         // ------------------------------------------------------------------------
-        // Exclude certain roles
-        // ------------------------------------------------------------------------
-        if($this->user->isLoggedin()) {
-            foreach($this->user->roles as $role) {
-                if(in_array((string) $role->name, $this->forRoles)) exit();
-            }
-        }
-    
-        // ------------------------------------------------------------------------
-        // Init page ID or exit if no ID given
-        // ------------------------------------------------------------------------
-        $pageID         = $this->sanitizer->int($this->input->post->pageID);
-        if(!ctype_digit($pageID)) exit();
-        $pageID         = $this->sanitizer->selectorValue($pageID);
-
-        // ------------------------------------------------------------------------
-        // Validate IP adress
+        // Validate IP address
         // ------------------------------------------------------------------------
         if(!$this->checkIP($this->session->getIP())) exit();
 
@@ -512,19 +538,37 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         if(!$this->checkBot()) exit();
 
         // ------------------------------------------------------------------------
-        // Load target page
+        // Exclude certain roles
         // ------------------------------------------------------------------------
-        $trackedPage    = $this->pages->findOne("id={$pageID}");
+        if($this->user->isLoggedin()) {
+            foreach($this->user->roles as $role) {
+                if(in_array((string) $role->name, $this->forRoles)) exit();
+            }
+        }
 
         // ------------------------------------------------------------------------
-        // Check for right template
+        // Init page ID or exit if no ID given
         // ------------------------------------------------------------------------
-        if($trackedPage->id AND in_array((string) $trackedPage->template->name, $this->forTemplates)) {
+        $pageID             = (int) $this->sanitizer->int($this->input->post->pid);
+        if(!is_int($pageID)) exit();
+        $pageID             = $this->sanitizer->selectorValue($pageID);
+
+        // ------------------------------------------------------------------------
+        // Load target page and check for right template
+        // ------------------------------------------------------------------------
+        if(wireCount($this->forTemplates) <= 0) exit();
+        $templateSelector   = implode('|', $this->forTemplates);
+        $trackedPage        = $this->pages->find("id={$pageID}, template={$templateSelector}, limit=1", array('findIDs' => 1));
+
+        // ------------------------------------------------------------------------
+        // If page found
+        // ------------------------------------------------------------------------
+        if(wireCount($trackedPage) > 0) {
 
             // ------------------------------------------------------------------------
             // Check for session lifetime
             // ------------------------------------------------------------------------
-            if(!$this->checkCookie($trackedPage->id)) exit();
+            if(!$this->checkCookie($pageID)) exit();
 
             // ------------------------------------------------------------------------
             // Build SQL query
@@ -588,7 +632,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Basic IP check
         // ------------------------------------------------------------------------
-        if(!$ip OR !filter_var($ip, FILTER_VALIDATE_IP)) return false;
+        if($this->ipValidation) {
+            if(!$ip OR !filter_var($ip, FILTER_VALIDATE_IP)) return false;
+        }
 
         // ------------------------------------------------------------------------
         // Check IP for custom filter list
@@ -612,6 +658,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * @return boolean
      */
     private function checkCookie($pageID) {
+
+        // ------------------------------------------------------------------------
+        // Do not create cookies if session lifetime is set to 0
+        // ------------------------------------------------------------------------
+        if((int) $this->sessionLifetime === 0) return true;
 
         // ------------------------------------------------------------------------
         // Get cookie
@@ -714,7 +765,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Rebuild new databse schema, install fieldtype and import old data
         // ------------------------------------------------------------------------
-        if($fromVersion <= 110 AND $toVersion == 120) {
+        if($fromVersion <= 110 AND $toVersion <= 121) {
 
             // ------------------------------------------------------------------------
             // Init vars
@@ -800,6 +851,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->tags        = "-pagehits";
             $field->icon        = 'eye';
             $field->save();
+        } else {
+            throw new WireException("A field with the name \"phits\" already exists. This means that this module cannot be installed.");
         }
     }
 

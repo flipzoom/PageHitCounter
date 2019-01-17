@@ -1,16 +1,1 @@
-bot|crawl|spider|robot|
-screenshot|simplepie|
-facebook|google|search|
-addthis|ahrefs|amazon|
-biglotron|buck|scraper|scaper|
-cloudflare|bing|baidu|semalt|
-disqus|embedly|feedly|fetch|flipboard|
-genieo|gigablast|jetty|jetslide|scan|
-metauri|miniflux|moreover|muckrack|ning|
-phantomjs|pocketparser|slak|snacktory|
-teoma|thinklab|tineye|traackr|trove|
-twurly|upflow|yahoo|yeti|zabbix|axios|
-binlar|coccoc|curl|deadlinkchecker|
-ezooms|eright|findthatfile|fluffy|
-heritrix|newspaper|page2rss|postrank|
-speedy|summify|wget|yandex|yanga|zgrab|whatsapp
+aboundex|addthis|admantx|adscanner|ahc|ahrefs|amazon|apercite|axios|baidu|barkrowler|biglotron|bing|bingpreview|binlar|bot|brandverity|btwebclient|bubing|buck|capsulechecker|changedetection|cloudflare|coccoc|convera|crawl|curl|cyberpatrol|dareboost|datafeedwatch|daum|deadlinkchecker|deusu|disqus|drupact|ec2linkfinder|electricmonk|embedly|eright|ezid|ezooms|facebook|facebookexternalhit|feedly|fetch|fever|findlink|findthatfile|flipboard|flipboardproxy|fluffy|genieo|gigablast|google|hatena|heritrix|httpunit|httrack|ichiro|integromedb|iskanie|jetslide|jetty|libwww|linkarchiver|linkdex|lipperhey|ltx71|mappydata|mastodon|megaindex|meltwaternews|metauri|miniflux|moreover|muckrack|netcraftsurveyagent|netresearchserver|netvibes|newsharecounts|newspaper|ning|nutch|nuzzel|okhttp|omgili|page2rss|panscient|phantomjs|pingdom|pinterest|pocketparser|postrank|proximic|pulsepoint|qwantify|retrevopageanalyzer|riddler|robot|scan|scaper|scoutjet|scraper|scrapy|screenshot|search|semalt|sentry|seokicks|seoscanners|simplepie|skypeuripreview|slak|snacktory|sogou|sonic|speedy|spider|summify|sysomos|teoma|thinklab|tineye|traackr|tracemyfile|trove|twurly|upflow|vkshare|webmon|wget|whatsapp|wotbox|yahoo|yak|yandex|yanga|yeti|zabbix|zgrab
