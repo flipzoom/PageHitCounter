@@ -57,12 +57,13 @@ echo $page->phits;
 ### Changelog
 1.2.1
 - API access to hit values `Use $page->phits`
-- Change database engine to InnoDB for phits field
-- Option to disable session lifetime `set session lifetime to 0, no cookies`
-- Better installation check
 - Bug-Fix: No tracking on welcomepage (Reported by wbmnfktr; Thx to matjazp)
+- Enhancement: Change database engine to InnoDB for phits field
+- Enhancement: Option to disable session lifetime `set session lifetime to 0, no cookies`
+- Enhancement: Better installation check
 - Enhancement: AJAX Request ansyncron
-- Option to hide the counter in the page tree `You can also output the counter yourself with the field name "phits"`
+- Enhancement: Option to hide the counter in the page tree `You can also output the counter yourself with the field name "phits"`
+- Enhancement: Option for activate general IP validation
 
 1.2.0
 - New feature: Sort pages by hits – New field `phits`
