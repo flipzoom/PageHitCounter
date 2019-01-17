@@ -4,7 +4,7 @@
 
 The Page Hit Counter module for processwire implements a simple page view counter in backend. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views.
 
-This gives you a quick overview of how many visitors have read a news or a blog post, for example, without first having to open complex tools such as Google Analytics. This module quickly provides simple information, e.g. for editors.
+This gives you a quick overview of how many visitors have read a news or a blog post, for example, without first having to open complex tools such as Google Analytics. This module quickly provides simple information, e.g. for editors. Or, for example, to sort certain news by most page views. For example for "Trending Topics".
 
 Works with `ProCache` and `AdBockers`. With a lightweight tracking code of only ~ 400 bytes (gzipped). And no code changes necessary! In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.
 
