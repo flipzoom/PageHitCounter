@@ -39,7 +39,7 @@ class FieldtypePageHitCounter extends Fieldtype {
         return array(
             'title'         => __('Page Hit Counter Selector Field'),
             'summary'       => __('This field is needed to provide page views as selector for sorting.'), 
-            'version'       => 120, 
+            'version'       => 121, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6', 'PageHitCounter')
         );
     }
@@ -76,8 +76,10 @@ class FieldtypePageHitCounter extends Fieldtype {
      * @return String        
      */
     public function getDatabaseSchema(Field $field) {
-        $schema         = parent::getDatabaseSchema($field);
-        $schema['data'] = "int UNSIGNED DEFAULT 0";
+        $charset                    = $this->wire('config')->dbCharset;
+        $schema                     = parent::getDatabaseSchema($field);
+        $schema['data']             = "int UNSIGNED DEFAULT 0";
+        $schema['xtra']['append']   = "ENGINE=InnoDB DEFAULT CHARSET=$charset";
         return $schema;
     }
 }
