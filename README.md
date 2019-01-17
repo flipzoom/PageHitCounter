@@ -52,6 +52,7 @@ echo $page->phits;
 - ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Better bot filter~~ `Since version 1.1.0`
 - ~~Disable session lifetime, don't store cookies to track every page view~~ (Request by matjazp) `Since version 1.2.1`
+- ~~Option to hide the counter in the page tree~~ (Request by matjazp) `Since version 1.2.1`
 
 ### Changelog
 1.2.1
@@ -60,6 +61,8 @@ echo $page->phits;
 - Option to disable session lifetime `set session lifetime to 0, no cookies`
 - Better installation check
 - Bug-Fix: No tracking on welcomepage (Reported by wbmnfktr; Thx to matjazp)
+- Enhancement: AJAX Request ansyncron
+- Option to hide the counter in the page tree `You can also output the counter yourself with the field name "phits"`
 
 1.2.0
 - New feature: Sort pages by hits – New field `phits`
