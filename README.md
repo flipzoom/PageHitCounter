@@ -51,12 +51,13 @@ echo $page->phits;
 - ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Better bot filter~~ `Since version 1.1.0`
-- Disable session lifetime, don't store cookies to track every page view (Request by matjazp)
+- ~~Disable session lifetime, don't store cookies to track every page view~~ (Request by matjazp) `Since version 1.2.1`
 
 ### Changelog
 1.2.1
 - API access to hit values `Use $page->phits`
 - Change database engine to InnoDB for phits field
+- Option to disable session lifetime `set session lifetime to 0, no cookies`
 
 1.2.0
 - New feature: Sort pages by hits – New field `phits`
