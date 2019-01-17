@@ -45,7 +45,7 @@ echo $page->phits;
 - No support for Internet Explorer version 6-9
 - No historical data, just simple summation (Because of GDPR)
 
-### Planned Features
+### Planned Features / ToDos
 - ~~API access to hit values~~ `Since version 1.2.1`
 - ~~Possibility to sort the pages by hits~~ (Request by Zeka) `Since version 1.2.0`
 - ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
