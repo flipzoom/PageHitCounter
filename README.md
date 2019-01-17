@@ -62,6 +62,7 @@ echo $page->phits;
 - Enhancement: Option to disable session lifetime `set session lifetime to 0, no cookies`
 - Enhancement: Better installation check
 - Enhancement: AJAX Request ansyncron
+- Enhancement: Reduction of the tracking script size by ~20%
 - Enhancement: Option to hide the counter in the page tree `You can also output the counter yourself with the field name "phits"`
 - Enhancement: Option for activate general IP validation
 
