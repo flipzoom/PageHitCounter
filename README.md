@@ -66,6 +66,7 @@ echo $page->phits;
 - Enhancement: Reduction of the tracking script size by ~20%
 - Enhancement: Option to hide the counter in the page tree `You can output the counter with the field name "phits"`
 - Enhancement: Option for activate general IP validation
+- Enhancement: Reduction of tracking overhead up to ~30ms
 
 1.2.0
 - New feature: Sort pages by hits – New field `phits`
