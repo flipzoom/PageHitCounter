@@ -25,10 +25,11 @@ echo $page->phits;
 
 ### Pros
 - Automatic PageView Tracking
-- Lightweight tracking code, only ~ 400 bytes (gzipped)
+- Lightweight tracking code, only ~400 bytes (gzipped)
 - No code or frontend changes necessary
 - Works with ProCache! Even if no PHP is executed on the cached page, the tracking works
 - Works with browser AdBlockers
+- No cache triggers (for example, ProCache) are triggered. The cache remains persistent
 - GDPR compliant, session-based cookie only, no personal information
 - Filtering of IPs and bots possible
 - Exclude certain roles from tracking
