@@ -51,6 +51,7 @@ echo $page->phits;
 - ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
 - ~~Better bot filter~~ `Since version 1.1.0`
+- Disable session lifetime, don't store cookies to track every page view (Request by matjazp)
 
 ### Changelog
 1.2.1
