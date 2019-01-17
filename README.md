@@ -58,9 +58,11 @@ echo $page->phits;
 - API access to hit values `Use $page->phits`
 - Change database engine to InnoDB for phits field
 - Option to disable session lifetime `set session lifetime to 0, no cookies`
+- Better installation check
 
 1.2.0
 - New feature: Sort pages by hits – New field `phits`
+- Migrate old counter data to new field
 
 1.1.0
 - New feature: Exclude tracking of certain roles
