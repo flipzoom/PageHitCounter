@@ -54,6 +54,7 @@ echo $page->phits;
 - [x] ~~Better bot filter~~ `Since version 1.1.0`
 - [x] ~~Disable session lifetime, don't store cookies to track every page view~~ (Request by matjazp) `Since version 1.2.1`
 - [x] ~~Option to hide the counter in the page tree~~ (Request by matjazp) `Since version 1.2.1`
+- [x] ~~Option to hide the counter in the page tree on certain templates~~ `Since version 1.2.1`
 - [ ] JavaScript API to track events for templates that are not viewable
 
 ### Changelog
@@ -67,6 +68,7 @@ echo $page->phits;
 - Enhancement: AJAX Request asyncron
 - Enhancement: Reduction of the tracking script size by ~20%
 - Enhancement: Option to hide the counter in the page tree `You can output the counter with the field name "phits"`
+- Enhancement: Option to hide the counter in the page tree on certain templates
 - Enhancement: Option for activate general IP validation
 - Enhancement: Reduction of tracking overhead up to ~30ms
 - Enhancement: Better bot list for detection
