@@ -81,7 +81,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'customAttributes'          => 'defer', 
             'forRoles'                  => array(), 
             'showForBackend'            => 1,
-            'ipValidation'              => 1
+            'ipValidation'              => 1, 
+            'excludeTemplates'          => array()
         );
     }
 
@@ -151,6 +152,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $forRoles           = (array) $input->post->forRoles;
             $showForBackend     = (int) $input->post->showForBackend;
             $ipValidation       = (int) $input->post->ipValidation;
+            $excludeTemplates   = (array) $input->post->excludeTemplates;
 
             // ------------------------------------------------------------------------
             // Performe counter reset
@@ -211,6 +213,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->description     = __("Should a counter be displayed in the admin page tree?");
             $field->notes           = __("You can also output the counter yourself with the field name \"phits\".");
             $field->value           = $data['showForBackend'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Template select for excluding in page tree
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldAsmSelect");
+            $field->name            = "excludeTemplates";
+            $field->label           = __("Exclude templates for page tree counter");
+            $field->showIf          = "showForBackend=1";
+            $field->icon            = "cubes";
+            $field->columnWidth     = '100';
+            $field->description     = __("Define here the templates for which no counter should be displayed explicitly in the page tree.");
+            $field->notes           = __("The tracking still works and you have access to the field \"phits\".");
+            foreach($templates as $template) $field->addOption($template->name);
+            $field->value           = $data['excludeTemplates'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -343,6 +360,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                         $field->icon            = "info-circle";
                         $field->label           = __("Result after reset");
                         $field->value           = "<span class='resetResultInfo'>". $resetResult ."</span>";
+                        $field->notes           = __("Note: The amount depends only on counters that have a value greater than 0.");
                         $fieldset->add($field);
                         $session->remove('resetResult');
                     }
@@ -481,7 +499,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                 // If it's just a dry run, return only the amount
                 // ------------------------------------------------------------------------
                 if($dryRun === 1) {
-                    $returnResult = $resultAmount . " " . __("pages would be affected by the change.");
+                    $returnResult = $resultAmount . " " . __("counters would be affected by the change.");
 
                 // ------------------------------------------------------------------------
                 // Else reset the affected records to 0
@@ -491,21 +509,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                     $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `data` = 0 WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
                     $query  = $database->prepare($sql);
                     $query->execute();
-                    $returnResult = $resultAmount . " " . __("pages have been reseted.");
+                    $returnResult = $resultAmount . " " . __("counters have been reseted.");
                 }
 
             // ------------------------------------------------------------------------
             // Else return info
             // ------------------------------------------------------------------------
             } else {
-                $returnResult = __("No pages would be affected by the change.");
+                $returnResult = __("No counters would be affected by the change.");
             }
 
         // ------------------------------------------------------------------------
         // Else return error
         // ------------------------------------------------------------------------
         } else {
-            $returnResult = __("No pages found. Check your selector.");
+            $returnResult = __("No counters found. Check your selector.");
         }
 
         // ------------------------------------------------------------------------
@@ -558,7 +576,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         if(wireCount($this->forTemplates) <= 0) exit();
         $templateSelector   = implode('|', $this->forTemplates);
-        $trackedPage        = $this->pages->find("id={$pageID}, template={$templateSelector}, limit=1", array('findIDs' => 1));
+        $trackedPage        = $this->pages->find("id={$pageID}, template={$templateSelector}, limit=1, include=hidden", array('findIDs' => 1));
 
         // ------------------------------------------------------------------------
         // If page found
@@ -729,7 +747,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // If current page template ist not allowed, return
         // ------------------------------------------------------------------------
-        if(!in_array($page->template->name, $this->forTemplates)) return;
+        if(!in_array($page->template->name, $this->forTemplates) OR in_array($page->template->name, $this->excludeTemplates)) return;
 
         // ------------------------------------------------------------------------
         // Else get hits and return event
