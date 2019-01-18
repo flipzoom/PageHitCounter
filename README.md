@@ -62,6 +62,7 @@ echo $page->phits;
 - API access to hit values `Use $page->phits`
 - Bug-Fix: No tracking on welcomepage (Reported by wbmnfktr; Thx to matjazp)
 - Bug-Fix: Tracking script path on subfolders (Reported by matjazp)
+- Bug-Fix: Tracking on pages with status "hidden"
 - Enhancement: Change database engine to InnoDB for phits field
 - Enhancement: Option to disable session lifetime `set session lifetime to 0, no cookies`
 - Enhancement: Better installation check
