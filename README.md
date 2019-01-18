@@ -1,4 +1,4 @@
-# Processwire Page Hit Counter
+# ProcessWire Page Hit Counter
 ![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/pagehitcounter-example.png)
 ## Simple Page View Tracking
 
@@ -47,13 +47,14 @@ echo $page->phits;
 - No historical data, just simple summation (Because of GDPR)
 
 ### Planned Features / ToDos
-- ~~API access to hit values~~ `Since version 1.2.1`
-- ~~Possibility to sort the pages by hits~~ (Request by Zeka) `Since version 1.2.0`
-- ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
-- ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
-- ~~Better bot filter~~ `Since version 1.1.0`
-- ~~Disable session lifetime, don't store cookies to track every page view~~ (Request by matjazp) `Since version 1.2.1`
-- ~~Option to hide the counter in the page tree~~ (Request by matjazp) `Since version 1.2.1`
+- [ ] JavaScript API to track events for templates that are not viewable
+- [x] API access to hit values `Since version 1.2.1`
+- [x] Possibility to sort the pages by hits (Request by Zeka) `Since version 1.2.0`
+- [x] Don't track logged in users with certain roles (Request by wbmnfktr) `Since version 1.1.0`
+- [x] Possibility to reset the counter for certain pages or templates (Request by wbmnfktr) `Since version 1.1.0`
+- [x] Better bot filter `Since version 1.1.0`
+- [x] Disable session lifetime, don't store cookies to track every page view (Request by matjazp) `Since version 1.2.1`
+- [x] Option to hide the counter in the page tree (Request by matjazp) `Since version 1.2.1`
 
 ### Changelog
 1.2.1
@@ -63,7 +64,7 @@ echo $page->phits;
 - Enhancement: Change database engine to InnoDB for phits field
 - Enhancement: Option to disable session lifetime `set session lifetime to 0, no cookies`
 - Enhancement: Better installation check
-- Enhancement: AJAX Request ansyncron
+- Enhancement: AJAX Request asyncron
 - Enhancement: Reduction of the tracking script size by ~20%
 - Enhancement: Option to hide the counter in the page tree `You can output the counter with the field name "phits"`
 - Enhancement: Option for activate general IP validation
