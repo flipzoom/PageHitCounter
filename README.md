@@ -2,7 +2,7 @@
 ![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/pagehitcounter-example.png)
 ## Simple Page View Tracking
 
-The Page Hit Counter module for processwire implements a simple page view counter in backend. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views.
+The Page Hit Counter module for ProcessWire implements a simple page view counter in backend. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views.
 
 This gives you a quick overview of how many visitors have read a news or a blog post, for example, without first having to open complex tools such as Google Analytics. This module quickly provides simple information, e.g. for editors. Or, for example, to sort certain news by most page views. For example for "Trending Topics".
 
@@ -24,7 +24,7 @@ echo $page->phits;
 ```
 
 ### Pros
-- Automatic PageView Tracking
+- Automatic Page View Tracking
 - Lightweight tracking code, only ~400 bytes (gzipped)
 - No code or frontend changes necessary
 - Works with ProCache! Even if no PHP is executed on the cached page, the tracking works
@@ -41,9 +41,9 @@ echo $page->phits;
 - Pages are sortable by hits
 
 ### Cons
-- Only for Processwire version 3.0.80 or higher (Requires wireCount())
+- Only for ProcessWire version 3.0.80 or higher (Requires wireCount())
 - Only for PHP version 5.6.x or higher
-- No support for Internet Explorer version 6-9
+- No support for Internet Explorer <= version 9 (Because of XMLHttpRequest())
 - No historical data, just simple summation (Because of GDPR)
 
 ### Planned Features / ToDos
