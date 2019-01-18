@@ -2,7 +2,7 @@
 
 /**
  * @author  FlipZoom Media Inc. - David Karich
- * @contact David Karich <david@flipzoom.de>
+ * @contact David Karich <david.karich@flipzoom.de>
  * @website www.flipzoom.de
  * @create  2019-01-10
  * @style   Tab size: 4 / Soft tabs: YES
@@ -34,7 +34,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * Define database tables
      * ------------------------------------------------------------------------
      */
-    const PHCDBTABLE        = 'modules_hit_counter';
+    const PHCDBTABLE        = 'field_phits';
+    const PHCFIELDNAME      = 'phits';
 
     /**
      * ------------------------------------------------------------------------
@@ -58,8 +59,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 100, 
-            'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6')
+            'version'       => 121, 
+            'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
+            'installs'      => array('FieldtypePageHitCounter')
         );
     }
 
@@ -77,7 +79,10 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'ipFilter'                  => '', 
             'botFilter'                 => 1, 
             'customAttributes'          => 'defer', 
-            'customSalt'                => ''
+            'forRoles'                  => array(), 
+            'showForBackend'            => 1,
+            'ipValidation'              => 1, 
+            'excludeTemplates'          => array()
         );
     }
 
@@ -109,6 +114,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         $modules        = wire('modules');
         $input          = wire('input');
         $pwTemplates    = wire('templates');
+        $pwRoles        = wire('roles');
+        $session        = wire('session');
+        $resetResult    = $session->get('resetResult');
 
         // ------------------------------------------------------------------------
         // Build template array and exlude system templates
@@ -116,6 +124,13 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         foreach($pwTemplates as $template) {
             if($template->flags AND Template::flagSystem) continue;
             $templates[] = $template;
+        }
+
+        // ------------------------------------------------------------------------
+        // Build roles array
+        // ------------------------------------------------------------------------
+        foreach($pwRoles as $role) {
+            $roles[] = $role;
         }
 
         // ------------------------------------------------------------------------
@@ -134,6 +149,22 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $ipFilter           = (string) $input->post->ipFilter;
             $botFilter          = (int) $input->post->botFilter;
             $customAttributes   = (string) $input->post->customAttributes;
+            $forRoles           = (array) $input->post->forRoles;
+            $showForBackend     = (int) $input->post->showForBackend;
+            $ipValidation       = (int) $input->post->ipValidation;
+            $excludeTemplates   = (array) $input->post->excludeTemplates;
+
+            // ------------------------------------------------------------------------
+            // Performe counter reset
+            // ------------------------------------------------------------------------
+            if($input->post->resetSelector !== "") {
+                $modules->get("PageHitCounter")->resetPageViews((string) $input->post->resetSelector, (int) $input->post->dryRun);
+            }
+
+            // ------------------------------------------------------------------------
+            // Add phit field to selected templates
+            // ------------------------------------------------------------------------
+            $modules->get("PageHitCounter")->addCounterField($forTemplates);
         }
 
         // ------------------------------------------------------------------------
@@ -165,8 +196,38 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->columnWidth     = '50';
             $field->required        = 1;
             $field->description     = __("During this period, repeated page views of the same page and by the same visitor are not counted as page view.");
-            $field->notes           = __("Default: 1200 seconds. Corresponds to a session duration of 20 minutes.");
-            $field->value           = ($data['sessionLifetime'] <= 0) ? 1200 : $data['sessionLifetime'];
+            $field->notes           = __("Default: 1200s. Corresponds to a liftetime of 20 minutes. If you set the value to 0, no cookie is stored and every page view is counted.");
+            $field->value           = ((int) $data['sessionLifetime'] < 0) ? 1200 : $data['sessionLifetime'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Show counter in backend
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "showForBackend";
+            $field->label           = __("Show counter in page tree");
+            $field->checkboxLabel   = __("Show counter");
+            $field->icon            = "eye";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['showForBackend']) ? 'checked' : '';
+            $field->description     = __("Should a counter be displayed in the admin page tree?");
+            $field->notes           = __("You can also output the counter yourself with the field name \"phits\".");
+            $field->value           = $data['showForBackend'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Template select for excluding in page tree
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldAsmSelect");
+            $field->name            = "excludeTemplates";
+            $field->label           = __("Exclude templates for page tree counter");
+            $field->showIf          = "showForBackend=1";
+            $field->icon            = "cubes";
+            $field->columnWidth     = '100';
+            $field->description     = __("Define here the templates for which no counter should be displayed explicitly in the page tree.");
+            $field->notes           = __("The tracking still works and you have access to the field \"phits\".");
+            foreach($templates as $template) $field->addOption($template->name);
+            $field->value           = $data['excludeTemplates'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -182,6 +243,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->description     = __("Should page views, which in the UserAgent give the definition Bot, Crawler or Spider for recognition, be filtered automatically?");
             $field->notes           = __("If no UserAgent can be extracted, the view is still counted.");
             $field->value           = $data['botFilter'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // General IP check
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "ipValidation";
+            $field->label           = __("General IP validation");
+            $field->checkboxLabel   = __("Enable IP validation");
+            $field->icon            = "heartbeat";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['ipValidation']) ? 'checked' : '';
+            $field->description     = __("Should a general check be performed for a triggered page view to determine whether the request originates from a valid IP address?");
+            $field->notes           = __("For this you need the PHP function \"filter_var()\".");
+            $field->value           = $data['ipValidation'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -205,9 +281,22 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->label           = __("Thousands seperator");
             $field->icon            = "ellipsis-h";
             $field->columnWidth     = '50';
-            $field->description     = __("For better readability of numbers, a thousand separator can be defined.");
-            $field->notes           = __("For example , or . or a space.");
+            $field->description     = __("For better readability of numbers, a thousand separator can be defined. This option only has an effect if you have activated the option \"Show counter in page tree\".");
+            $field->notes           = __("For example , or . or a space. Only for display in the page tree.");
             $field->value           = $data['thousandSeperator'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Role select
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldAsmSelect");
+            $field->name            = "forRoles";
+            $field->label           = __("Exclude roles of logged in users");
+            $field->icon            = "user-circle-o";
+            $field->columnWidth     = '100';
+            $field->description     = __("Logged-in users who are assigned one of the following roles are excluded from tracking. For example, working editors are not counted as page views.");
+            foreach($roles as $role) $field->addOption($role->name);
+            $field->value           = $data['forRoles'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -222,6 +311,64 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->description     = __("A list of IP addresses that should be excluded from tracking. This is useful, for example, if CronJobs run across the page which should not be counted as visitors. One IP address per line.");
             $field->value           = $data['ipFilter'];
             $form->add($field);
+
+                // ------------------------------------------------------------------------
+                // Reset counter per selector
+                // ------------------------------------------------------------------------
+                $fieldset               = $modules->get("InputfieldFieldset");
+                $fieldset->name         = "resetCounter";
+                $fieldset->collapsed    = ($resetResult) ? Inputfield::collapsedNo : Inputfield::collapsedYes;
+                $fieldset->label        = __("Reset Page Views");
+                $fieldset->description  = __("Here you have the possibility to reset all page views for a certain selector to 0. Before you execute it, you can start a dry run.");
+                $fieldset->icon         = "eraser";
+                $fieldset->columnWidth  = '100';
+
+                    // ------------------------------------------------------------------------
+                    // Selector
+                    // ------------------------------------------------------------------------
+                    $field                  = $modules->get("InputfieldText");
+                    $field->name            = "resetSelector";
+                    $field->label           = __("Custom page selector");
+                    $field->icon            = "database";
+                    $field->columnWidth     = '70';
+                    $field->description     = __("Enter here the ProcessWire page selector on which pages and/or templates a counter should be reset.");
+                    $field->notes           = __("For example: \"template=news\" or \"id=123|456|789\". If you have many pages, use limits in your selectors before triggering a timeout.");
+                    $field->value           = "";
+                    $fieldset->add($field);
+
+                    // ------------------------------------------------------------------------
+                    // Dry run
+                    // ------------------------------------------------------------------------
+                    $field                  = $modules->get("InputfieldCheckbox");
+                    $field->name            = "dryRun";
+                    $field->label           = __("Dry run");
+                    $field->checkboxLabel   = __("Perform a dry run");
+                    $field->icon            = "exclamation-triangle";
+                    $field->columnWidth     = '30';
+                    $field->checked         = 'checked';
+                    $field->description     = __("Activate the dry run option for a test.");
+                    $field->notes           = __("If this option is activated, no data records are changed.");
+                    $field->value           = 1;
+                    $fieldset->add($field);
+
+                    // ------------------------------------------------------------------------
+                    // Reset results
+                    // ------------------------------------------------------------------------
+                    if($resetResult) {
+                        $field                  = $modules->get("InputfieldMarkup");
+                        $field->name            = "resetResult";
+                        $field->icon            = "info-circle";
+                        $field->label           = __("Result after reset");
+                        $field->value           = "<span class='resetResultInfo'>". $resetResult ."</span>";
+                        $field->notes           = __("Note: The amount depends only on counters that have a value greater than 0.");
+                        $fieldset->add($field);
+                        $session->remove('resetResult');
+                    }
+
+                // ------------------------------------------------------------------------
+                // Add fieldset to form
+                // ------------------------------------------------------------------------
+                $form->add($fieldset);
 
         // ------------------------------------------------------------------------
         // Build form
@@ -238,22 +385,151 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
     public function init() {
 
         // ------------------------------------------------------------------------
-        // Add scripts and styles
-        // ------------------------------------------------------------------------
-        wire('config')->styles->add($this->config->urls->PageHitCounter . 'PageHitCounter.min.css');
-
-        // ------------------------------------------------------------------------
         // Only attach hooks if templates are configured
         // ------------------------------------------------------------------------
-        if(wireCount($this->forTemplates) > 0) {
+        if(WireCount($this->forTemplates) > 0) {
             
-            $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
+            // ------------------------------------------------------------------------
+            // Show counter in page tree
+            // ------------------------------------------------------------------------
+            if($this->showForBackend) {
+                $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
+                wire('config')->styles->add($this->config->urls->PageHitCounter . 'PageHitCounter.min.css');
+            }
+
+            // ------------------------------------------------------------------------
+            // Attach hook for tracking script
+            // ------------------------------------------------------------------------
             $this->addHookAfter("Page::render", $this, 'insertAutomaticHitCounterTracking');
 
+            // ------------------------------------------------------------------------
+            // Attach hook for AJAX post request tracking
+            // ------------------------------------------------------------------------
             if(isset($_SERVER['REQUEST_URI']) AND strlen($_SERVER['REQUEST_URI']) - strlen('/phcv1') === strrpos($_SERVER['REQUEST_URI'], '/phcv1')) {
                 $this->addHookBefore("ProcessPageView::pageNotFound", $this, "trackPageView");
             }
         }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Add phit field to selected templates
+     * ------------------------------------------------------------------------
+     * @param array $toTemplates
+     */
+    private function addCounterField($toTemplates) {
+
+        // ------------------------------------------------------------------------
+        // Init vars
+        // ------------------------------------------------------------------------
+        $templates = wire('templates');
+
+        // ------------------------------------------------------------------------
+        // Add field to templates
+        // ------------------------------------------------------------------------
+        if(wireCount($toTemplates) > 0) {
+            foreach($toTemplates as $toTemplate) {
+                $t = $templates->get("{$toTemplate}");
+                if($t->id) {
+                    if(!$t->hasField(self::PHCFIELDNAME)) {
+                        $t->fields->add(self::PHCFIELDNAME);
+                        $t->fields->save();
+                    }
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------------
+        // Remove phits from non selected templates
+        // ------------------------------------------------------------------------
+        foreach($templates as $template) {
+            if(!in_array((string) $template->name, $toTemplates)) {
+                if($template->hasField(self::PHCFIELDNAME)) {
+                    $template->fields->remove(self::PHCFIELDNAME);
+                    $template->fields->save();
+                }
+            }
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Reset page view by given selector
+     * ------------------------------------------------------------------------
+     * @param  string $pageSelector
+     * @param  integer $dryRun
+     */
+    private function resetPageViews($pageSelector, $dryRun) {
+
+        // ------------------------------------------------------------------------
+        // Init vars
+        // ------------------------------------------------------------------------
+        $sanitizer      = wire('sanitizer');
+        $pages          = wire('pages');
+        $database       = wire('database');
+        $session        = wire('session');
+        $returnResult   = "";
+
+        // ------------------------------------------------------------------------
+        // Get page ids from selector
+        // ------------------------------------------------------------------------
+        $pageSelector   = wire('sanitizer')->text($pageSelector);
+        $pageResults    = wire('pages')->findMany("{$pageSelector}", array('getIds' => true));
+        
+        // ------------------------------------------------------------------------
+        // If pages found
+        // ------------------------------------------------------------------------
+        if($pageResults) {
+
+            // ------------------------------------------------------------------------
+            // Select entries from counter table
+            // ------------------------------------------------------------------------
+            $ids    = implode(',', explode('|', $pageResults));
+            $sql    = "SELECT `pages_id` FROM `". self::PHCDBTABLE ."` WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
+            $query  = $database->prepare($sql);
+            $query->execute();
+            
+            // ------------------------------------------------------------------------
+            // If records were found 
+            // ------------------------------------------------------------------------
+            if($query->rowCount() > 0) {
+                $resultAmount = $query->rowCount();
+
+                // ------------------------------------------------------------------------
+                // If it's just a dry run, return only the amount
+                // ------------------------------------------------------------------------
+                if($dryRun === 1) {
+                    $returnResult = $resultAmount . " " . __("counters would be affected by the change.");
+
+                // ------------------------------------------------------------------------
+                // Else reset the affected records to 0
+                // ------------------------------------------------------------------------
+                } else {
+
+                    $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `data` = 0 WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
+                    $query  = $database->prepare($sql);
+                    $query->execute();
+                    $returnResult = $resultAmount . " " . __("counters have been reseted.");
+                }
+
+            // ------------------------------------------------------------------------
+            // Else return info
+            // ------------------------------------------------------------------------
+            } else {
+                $returnResult = __("No counters would be affected by the change.");
+            }
+
+        // ------------------------------------------------------------------------
+        // Else return error
+        // ------------------------------------------------------------------------
+        } else {
+            $returnResult = __("No counters found. Check your selector.");
+        }
+
+        // ------------------------------------------------------------------------
+        // Set result in session var
+        // ------------------------------------------------------------------------
+        $session->set('resetResult', $returnResult);
     }
 
     /**
@@ -268,16 +544,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // If no AJAX request, exit
         // ------------------------------------------------------------------------
         if(empty($_SERVER['HTTP_X_REQUESTED_WITH']) OR strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) !== 'xmlhttprequest') exit();
-    
-        // ------------------------------------------------------------------------
-        // Init page ID or exit if no ID given
-        // ------------------------------------------------------------------------
-        $pageID         = $this->sanitizer->int($this->input->post->pageID);
-        if(!ctype_digit($pageID)) exit();
-        $pageID         = $this->sanitizer->selectorValue($pageID);
 
         // ------------------------------------------------------------------------
-        // Validate IP adress
+        // Validate IP address
         // ------------------------------------------------------------------------
         if(!$this->checkIP($this->session->getIP())) exit();
 
@@ -287,24 +556,42 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         if(!$this->checkBot()) exit();
 
         // ------------------------------------------------------------------------
-        // Load target page
+        // Exclude certain roles
         // ------------------------------------------------------------------------
-        $trackedPage    = $this->pages->findOne("id={$pageID}");
+        if($this->user->isLoggedin()) {
+            foreach($this->user->roles as $role) {
+                if(in_array((string) $role->name, $this->forRoles)) exit();
+            }
+        }
 
         // ------------------------------------------------------------------------
-        // Check for right template
+        // Init page ID or exit if no ID given
         // ------------------------------------------------------------------------
-        if($trackedPage->id AND in_array((string) $trackedPage->template->name, $this->forTemplates)) {
+        $pageID             = (int) $this->sanitizer->int($this->input->post->pid);
+        if(!is_int($pageID)) exit();
+        $pageID             = $this->sanitizer->selectorValue($pageID);
+
+        // ------------------------------------------------------------------------
+        // Load target page and check for right template
+        // ------------------------------------------------------------------------
+        if(wireCount($this->forTemplates) <= 0) exit();
+        $templateSelector   = implode('|', $this->forTemplates);
+        $trackedPage        = $this->pages->find("id={$pageID}, template={$templateSelector}, limit=1, include=hidden", array('findIDs' => 1));
+
+        // ------------------------------------------------------------------------
+        // If page found
+        // ------------------------------------------------------------------------
+        if(wireCount($trackedPage) > 0) {
 
             // ------------------------------------------------------------------------
             // Check for session lifetime
             // ------------------------------------------------------------------------
-            if(!$this->checkCookie($trackedPage->id)) exit();
+            if(!$this->checkCookie($pageID)) exit();
 
             // ------------------------------------------------------------------------
             // Build SQL query
             // ------------------------------------------------------------------------
-            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`page_id`, `page_counter`) VALUES (:page_id, 1) ON DUPLICATE KEY UPDATE `page_counter` = page_counter + 1;";
+            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`pages_id`, `data`) VALUES (:page_id, 1) ON DUPLICATE KEY UPDATE `data` = data + 1;";
 
             // ------------------------------------------------------------------------
             // Execute SQL
@@ -343,8 +630,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // Check Usergent for bot signature
         // ------------------------------------------------------------------------
         if(isset($_SERVER['HTTP_USER_AGENT'])) { 
-            $useragent = $this->sanitizer->text($_SERVER['HTTP_USER_AGENT']);
-            if(preg_match('/(bot|crawl|spider)/i', $useragent)) return false;
+            $useragent  = $this->sanitizer->text($_SERVER['HTTP_USER_AGENT']);
+            $botlist    = preg_replace("/\r|\n/", "", file_get_contents(__DIR__ . "/botlist.txt"));
+            if(preg_match("/({$botlist})/i", $useragent)) return false;
         }
 
         return true;
@@ -362,7 +650,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Basic IP check
         // ------------------------------------------------------------------------
-        if(!$ip OR !filter_var($ip, FILTER_VALIDATE_IP)) return false;
+        if($this->ipValidation) {
+            if(!$ip OR !filter_var($ip, FILTER_VALIDATE_IP)) return false;
+        }
 
         // ------------------------------------------------------------------------
         // Check IP for custom filter list
@@ -386,6 +676,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * @return boolean
      */
     private function checkCookie($pageID) {
+
+        // ------------------------------------------------------------------------
+        // Do not create cookies if session lifetime is set to 0
+        // ------------------------------------------------------------------------
+        if((int) $this->sessionLifetime === 0) return true;
 
         // ------------------------------------------------------------------------
         // Get cookie
@@ -452,61 +747,12 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // If current page template ist not allowed, return
         // ------------------------------------------------------------------------
-        if(!in_array($page->template->name, $this->forTemplates)) return;
+        if(!in_array($page->template->name, $this->forTemplates) OR in_array($page->template->name, $this->excludeTemplates)) return;
 
         // ------------------------------------------------------------------------
         // Else get hits and return event
         // ------------------------------------------------------------------------
-        $hits           = $this->getHitsFromDB((int) $page->id);
-        $event->return  = $this->buildPageListHitCounter((int) $hits) . $event->return;
-    }
-
-    /**
-     * ------------------------------------------------------------------------
-     * Get hit counter for given page as int or 0
-     * ------------------------------------------------------------------------
-     * @param  int $pageID
-     * @return int
-     */
-    private function getHitsFromDB($pageID) {
-
-        // ------------------------------------------------------------------------
-        // Init page_id
-        // ------------------------------------------------------------------------
-        $pageID = $this->sanitizer->int($pageID);
-        if(!ctype_digit($pageID)) return (int) 0;
-
-        // ------------------------------------------------------------------------
-        // Build SQL query
-        // ------------------------------------------------------------------------
-        $sql    = "SELECT `page_counter` FROM `". self::PHCDBTABLE ."` WHERE `page_id` = :page_id LIMIT 1;";
-
-        // ------------------------------------------------------------------------
-        // Execute SQL
-        // ------------------------------------------------------------------------
-        try {
-            $query = $this->database->prepare($sql);
-            $query->bindValue(':page_id', $pageID);
-            $query->execute();
-
-        } catch(Exception $e) {
-            $this->log->error($e->getMessage());
-            $this->error($e->getMessage());
-        }
-
-        // ------------------------------------------------------------------------
-        // If counter exists, return counter value
-        // ------------------------------------------------------------------------
-        if($query->rowCount() > 0) {
-            $result = $query->fetch(\PDO::FETCH_ASSOC);
-            return (int) $result['page_counter'];
-
-        // ------------------------------------------------------------------------
-        // Else insert new entry and return 0
-        // ------------------------------------------------------------------------
-        } else {
-            return (int) 0;
-        }
+        $event->return = $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME)) . $event->return;
     }
 
     /**
@@ -527,30 +773,104 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
+     * Upgrade module and schema
+     * ------------------------------------------------------------------------
+     * @param  int $fromVersion 
+     * @param  int $toVersion   
+     */
+    public function ___upgrade($fromVersion, $toVersion) {
+
+        // ------------------------------------------------------------------------
+        // Rebuild new databse schema, install fieldtype and import old data
+        // ------------------------------------------------------------------------
+        if($fromVersion <= 110 AND $toVersion <= 121) {
+
+            // ------------------------------------------------------------------------
+            // Init vars
+            // ------------------------------------------------------------------------
+            $fields     = wire('fields');
+            $modules    = wire('modules');
+
+            if(!$modules->isInstalled("FieldtypePageHitCounter")) {
+                $modules->install("FieldtypePageHitCounter");
+            }
+
+            // ------------------------------------------------------------------------
+            // Create and install hit counter field type
+            // ------------------------------------------------------------------------
+            if(!$fields->get(self::PHCFIELDNAME)) {
+                $field              = new Field;
+                $field->type        = $this->modules->get("FieldtypePageHitCounter");
+                $field->name        = self::PHCFIELDNAME;
+                $field->label       = __("Page hits");
+                $field->flags       = 0;
+                $field->collapsed   = 4;
+                $field->tags        = "-pagehits";
+                $field->icon        = 'eye';
+                $field->save();
+            }
+
+            // ------------------------------------------------------------------------
+            // Add phits to templates
+            // ------------------------------------------------------------------------
+            if(wireCount($this->forTemplates) > 0) {
+                $this->addCounterField($this->forTemplates);
+            }
+
+            // ------------------------------------------------------------------------
+            // Write old counter stats to new phits field
+            // ------------------------------------------------------------------------
+            $sql    = "SELECT * FROM `modules_hit_counter` WHERE `page_id` != 0;";
+            $query  = $this->database->prepare($sql);
+            $query->execute();
+
+            if($query->rowCount() > 0) {
+                $result = $query;
+                foreach($result as $entry) {
+                    $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`pages_id`, `data`) VALUES (:page_id, :counter) ON DUPLICATE KEY UPDATE `data` = :counter;";
+                    $query  = $this->database->prepare($sql);
+                    $query->bindValue(':page_id', $entry['page_id']);
+                    $query->bindValue(':counter', $entry['page_counter']);
+                    $query->execute();
+                }
+            }
+             
+            // ------------------------------------------------------------------------
+            // Delete old DB
+            // ------------------------------------------------------------------------
+            $sql    = "DROP TABLE `modules_hit_counter`;";
+            $query  = $this->database->prepare($sql);
+            $query->execute();
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
      * Install module and database table
      * ------------------------------------------------------------------------
      */
     public function ___install() {
 
         // ------------------------------------------------------------------------
-        // Create new counter table for module
+        // Init vars
         // ------------------------------------------------------------------------
-        $sql = "CREATE TABLE IF NOT EXISTS `". self::PHCDBTABLE ."` (
-                    `page_id` int(10) unsigned NOT NULL, 
-                    `page_counter` int(10) unsigned DEFAULT '0', 
-                    PRIMARY KEY (`page_id`), 
-                    UNIQUE KEY `page_id` (`page_id`) 
-                ) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
-        
-        // ------------------------------------------------------------------------
-        // Execute SQL
-        // ------------------------------------------------------------------------
-        try {
-            $this->database->exec($sql);
+        $fields     = wire('fields');
 
-        } catch(Exception $e) {
-            $this->log->error($e->getMessage());
-            $this->error($e->getMessage());
+        // ------------------------------------------------------------------------
+        // Create and install hit counter field type
+        // ------------------------------------------------------------------------
+        if(!$fields->get(self::PHCFIELDNAME)) {
+            $field              = new Field;
+            $field->type        = $this->modules->get("FieldtypePageHitCounter");
+            $field->name        = self::PHCFIELDNAME;
+            $field->label       = __("Page hits");
+            $field->flags       = 0;
+            $field->collapsed   = 4;
+            $field->tags        = "-pagehits";
+            $field->icon        = 'eye';
+            $field->save();
+        } else {
+            throw new WireException("A field with the name \"phits\" already exists. This means that this module cannot be installed.");
         }
     }
 
@@ -559,7 +879,34 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * Uninstall module and database table
      * ------------------------------------------------------------------------
      */
-    public function ___uninstall() {}
+    public function ___uninstall() {
+
+        // ------------------------------------------------------------------------
+        // Init vars
+        // ------------------------------------------------------------------------
+        $fields     = wire('fields');
+        $templates  = wire('templates');
+        $modules    = wire('modules');
+
+        // ------------------------------------------------------------------------
+        // Remove phits from templates
+        // ------------------------------------------------------------------------
+        foreach($templates as $template) {
+            if(!$template->hasField(self::PHCFIELDNAME)) continue;
+            $template->fields->remove(self::PHCFIELDNAME);
+            $template->fields->save();
+        }
+
+        // ------------------------------------------------------------------------
+        // Delete field
+        // ------------------------------------------------------------------------
+        $fields->delete($fields->get(self::PHCFIELDNAME));
+
+        // ------------------------------------------------------------------------
+        // Uninstall fieldtype counter
+        // ------------------------------------------------------------------------
+        $modules->uninstall('FieldtypePageHitCounter');        
+    }
 }
 
 ?>

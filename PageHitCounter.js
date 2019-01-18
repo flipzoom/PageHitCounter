@@ -47,57 +47,31 @@
         // ------------------------------------------------------------------------
         // Init and get current page ID
         // ------------------------------------------------------------------------
-        var pageID  = this.getPageID();
-
-        // ------------------------------------------------------------------------
-        // Send AJAX request
-        // ------------------------------------------------------------------------
-        if(pageID !== false) {
-            this.sendHit(pageID);
-        
-        } else {
-            console.warn('Page Hit Counter: The page view was not counted.');
-        }
-    }
-
-    /**
-     * ------------------------------------------------------------------------
-     * Get current page ID for tracking
-     * ------------------------------------------------------------------------
-     * @return {int}
-     */
-    PHC.getPageID = function() {
         try {
-            var body    = document.getElementsByTagName("BODY")[0], 
-                pageID  = body.getAttribute('data-phc');
-            return parseInt(pageID);
+            var body = document.getElementsByTagName("BODY")[0], 
+                pid  = parseInt(body.getAttribute('data-phc'));
+
+            // ------------------------------------------------------------------------
+            // Send pure AJAX call to track page view
+            // ------------------------------------------------------------------------
+            if(!isNaN(pid)) {
+                var xhr = new XMLHttpRequest();
+                xhr.open('POST', location.pathname + "phcv1", true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                xhr.onload = function() {
+                    if(xhr.status !== 200) {
+                        console.error('Page Hit Counter: Request failed. Returned status of ' + xhr.status);
+                    } else {
+                        console.info('Page Hit Counter: Tracked. ' + xhr.responseText);
+                    }
+                };
+                xhr.send(encodeURI('pid=' + pid));
+            }
 
         } catch(e) {
             console.warn('Page Hit Counter: No Page ID found.');
             return false;
-        }
-    }
-
-    /**
-     * ------------------------------------------------------------------------
-     * Send pure AJAX call to track page view
-     * ------------------------------------------------------------------------ 
-     * @param {int} pageID
-     */
-    PHC.sendHit = function(pageID) {
-        if(!isNaN(pageID)) {
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', "/phcv1");
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-            xhr.onload = function() {
-                if(xhr.status !== 200) {
-                    console.error('Page Hit Counter: Request failed. Returned status of ' + xhr.status);
-                } else {
-                    console.info('Page Hit Counter: View was counted. ' + xhr.responseText);
-                }
-            };
-            xhr.send(encodeURI('pageID=' + pageID));
         }
     }
     
