@@ -1,5 +1,5 @@
 # ProcessWire Page Hit Counter
-![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/pagehitcounter-example.png)
+![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/PageHitCounter/pagehitcounter-example.png)
 ## Simple Page View Tracking
 
 The Page Hit Counter module for ProcessWire implements a simple page view counter in backend. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views.
@@ -10,7 +10,7 @@ Works with `ProCache` and `AdBlockers`. With a lightweight tracking code of only
 
 In addition, there are some options, for example filtering IP addresses (for CronJobs) and filtering bots, spiders and crawlers. You can also configure the lifetime of the session cookies. Repeated page views are not counted during this period. It is also possible to exclude certain roles from tracking. For example, logged in editors who work on a page are not counted as page views.
 
-![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/pagehitcounter-config-example.png)
+![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/PageHitCounter/pagehitcounter-config.png)
 
 ## Sort by hits and access page views (hit value)
 Each trackable template has an additional field called `phits`. For example, you want to output all news sorted by the number of page views.
