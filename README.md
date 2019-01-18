@@ -47,14 +47,14 @@ echo $page->phits;
 - No historical data, just simple summation (Because of GDPR)
 
 ### Planned Features / ToDos
+- [x] ~~API access to hit values~~ `Since version 1.2.1`
+- [x] ~~Possibility to sort the pages by hits~~ (Request by Zeka) `Since version 1.2.0`
+- [x] ~~Don't track logged in users with certain roles~~ (Request by wbmnfktr) `Since version 1.1.0`
+- [x] ~~Possibility to reset the counter for certain pages or templates~~ (Request by wbmnfktr) `Since version 1.1.0`
+- [x] ~~Better bot filter~~ `Since version 1.1.0`
+- [x] ~~Disable session lifetime, don't store cookies to track every page view~~ (Request by matjazp) `Since version 1.2.1`
+- [x] ~~Option to hide the counter in the page tree~~ (Request by matjazp) `Since version 1.2.1`
 - [ ] JavaScript API to track events for templates that are not viewable
-- [x] API access to hit values `Since version 1.2.1`
-- [x] Possibility to sort the pages by hits (Request by Zeka) `Since version 1.2.0`
-- [x] Don't track logged in users with certain roles (Request by wbmnfktr) `Since version 1.1.0`
-- [x] Possibility to reset the counter for certain pages or templates (Request by wbmnfktr) `Since version 1.1.0`
-- [x] Better bot filter `Since version 1.1.0`
-- [x] Disable session lifetime, don't store cookies to track every page view (Request by matjazp) `Since version 1.2.1`
-- [x] Option to hide the counter in the page tree (Request by matjazp) `Since version 1.2.1`
 
 ### Changelog
 1.2.1
