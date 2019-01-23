@@ -55,11 +55,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'title'         => __('Page Hit Counter'),
             'summary'       => __('The Page Hit Counter module implements a simple page view counter. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views. Even if the page is cached. Also works with ProCache and AdBockers. With a lightweight tracking code of 490 bytes (gzipped). In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.'),
             'author'        => 'David Karich - FlipZoom Media Inc.',
-            'href'          => 'https://www.flipzoom.de',
+            'href'          => 'https://github.com/FlipZoomMedia/PageHitCounter',
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 121, 
+            'version'       => 122, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );
@@ -74,6 +74,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
     public static function getDefaultConfig() {
         return array(
             'forTemplates'              => array(), 
+            'forAPITemplates'           => array(), 
             'thousandSeperator'         => '.', 
             'sessionLifetime'           => 1200, 
             'ipFilter'                  => '', 
@@ -144,6 +145,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         if($input->post->submit_save_module) {
             $forTemplates       = (array) $input->post->forTemplates;
+            $forAPITemplates    = (array) $input->post->forAPITemplates;
             $thousandSeperator  = (string) $input->post->thousandSeperator;
             $sessionLifetime    = (int) $input->post->sessionLifetime;
             $ipFilter           = (string) $input->post->ipFilter;
@@ -164,7 +166,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             // Add phit field to selected templates
             // ------------------------------------------------------------------------
-            $modules->get("PageHitCounter")->addCounterField($forTemplates);
+            $modules->get("PageHitCounter")->addCounterField(array_unique(array_merge($forTemplates, $forAPITemplates)));
         }
 
         // ------------------------------------------------------------------------
@@ -173,17 +175,31 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         $form = new InputfieldWrapper();
 
             // ------------------------------------------------------------------------
-            // Template select
+            // Template select for automatic tracking
             // ------------------------------------------------------------------------
             $field                  = $modules->get("InputfieldAsmSelect");
             $field->name            = "forTemplates";
-            $field->label           = __("Templates for tracking");
+            $field->label           = __("Templates for automatic tracking");
             $field->icon            = "cubes";
             $field->columnWidth     = '100';
-            $field->description     = __("Select one or more templates, which should automatically have a hit counter and be tracked in the frontend.");
+            $field->description     = __("Select one or more templates, which should automatically have a hit counter and be tracked in the frontend. These templates must represent a complete page in the frontend, with a <body> tag.");
             $field->notes           = __("For the selected templates, a lightweight tracking script is injected before the closing </body> tag.");
             foreach($templates as $template) $field->addOption($template->name);
             $field->value           = $data['forTemplates'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Template select for API tracking
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldAsmSelect");
+            $field->name            = "forAPITemplates";
+            $field->label           = __("Templates for allowed API tracking");
+            $field->icon            = "cubes";
+            $field->columnWidth     = '100';
+            $field->description     = __("Select one or more templates, which can be trackable via the API, but are not directly viewable in the frontend. For example to track keywords.");
+            $field->notes           = __("You can find out how to track a page hit via the API in the documentation.");
+            foreach($templates as $template) $field->addOption($template->name);
+            $field->value           = $data['forAPITemplates'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -387,7 +403,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Only attach hooks if templates are configured
         // ------------------------------------------------------------------------
-        if(WireCount($this->forTemplates) > 0) {
+        if(wireCount($this->forTemplates) > 0 OR wireCount($this->forAPITemplates) > 0) {
             
             // ------------------------------------------------------------------------
             // Show counter in page tree
@@ -398,9 +414,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             }
 
             // ------------------------------------------------------------------------
-            // Attach hook for tracking script
+            // Attach hook for automatic tracking script
             // ------------------------------------------------------------------------
-            $this->addHookAfter("Page::render", $this, 'insertAutomaticHitCounterTracking');
+            if(wireCount($this->forTemplates) > 0) {
+                $this->addHookAfter("Page::render", $this, 'insertAutomaticHitCounterTracking');
+            }
 
             // ------------------------------------------------------------------------
             // Attach hook for AJAX post request tracking
@@ -574,8 +592,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Load target page and check for right template
         // ------------------------------------------------------------------------
-        if(wireCount($this->forTemplates) <= 0) exit();
-        $templateSelector   = implode('|', $this->forTemplates);
+        if(wireCount($this->forTemplates) <= 0 AND wireCount($this->forAPITemplates) <= 0) exit();
+        $templateSelector   = implode('|', array_unique(array_merge($this->forTemplates, $this->forAPITemplates)));
         $trackedPage        = $this->pages->find("id={$pageID}, template={$templateSelector}, limit=1, include=hidden", array('findIDs' => 1));
 
         // ------------------------------------------------------------------------
@@ -745,9 +763,14 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         if(isset($event->arguments[1]) && $event->arguments[1]['noTags']) return;
 
         // ------------------------------------------------------------------------
+        // Merge templates
+        // ------------------------------------------------------------------------
+        $allowedTemplates = array_unique(array_merge($this->forTemplates, $this->forAPITemplates));
+
+        // ------------------------------------------------------------------------
         // If current page template ist not allowed, return
         // ------------------------------------------------------------------------
-        if(!in_array($page->template->name, $this->forTemplates) OR in_array($page->template->name, $this->excludeTemplates)) return;
+        if(!in_array($page->template->name, $allowedTemplates) OR in_array($page->template->name, $this->excludeTemplates)) return;
 
         // ------------------------------------------------------------------------
         // Else get hits and return event
@@ -813,8 +836,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             // Add phits to templates
             // ------------------------------------------------------------------------
-            if(wireCount($this->forTemplates) > 0) {
-                $this->addCounterField($this->forTemplates);
+            if(wireCount($this->forTemplates) > 0 OR wireCount($this->forAPITemplates) > 0) {
+                $this->addCounterField(array_unique(array_merge($this->forTemplates, $this->forAPITemplates)));
             }
 
             // ------------------------------------------------------------------------

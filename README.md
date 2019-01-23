@@ -10,7 +10,7 @@ Works with `ProCache` and `AdBlockers`. With a lightweight tracking code of only
 
 In addition, there are some options, for example filtering IP addresses (for CronJobs) and filtering bots, spiders and crawlers. You can also configure the lifetime of the session cookies. Repeated page views are not counted during this period. It is also possible to exclude certain roles from tracking. For example, logged in editors who work on a page are not counted as page views.
 
-![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/PageHitCounter/pagehitcounter-config.png)
+![alt text](https://github.com/FlipZoomMedia/RepoAssets/blob/master/PageHitCounter/pagehitcounter-config-example.png)
 
 ## Sort by hits and access page views (hit value)
 Each trackable template has an additional field called `phits`. For example, you want to output all news sorted by the number of page views.
@@ -22,6 +22,39 @@ To output the page views of a tracked page, use:
 ```php
 echo $page->phits;
 ```
+## Example: Tracking a page hit via API and jQuery
+If you want to track a template that does not represent a full page to automatically inject a tracking script, you can define allowed API templates in the module that you can track.
+
+Below is an example of how you can track a click on news tag using jQuery. This will allow you to find out which keywords are clicked the most. For example, you can sort and display a tag cloud by the number of hits.
+
+Suppose your keywords have the template "news_tag". The template "news_tag" was also configured in the Page Hit Counter Module as a trackable API template.
+
+**PHP output of keywords / tags**
+```php
+// Required: the data attribute "data-pid" with the ID of the template to be tracked.
+echo $pages->find("template=news_tag, sort=-phits")->each("<a href='{url}' class='news_tag' data-pid='{id}'>{title}</a>");
+```
+**Example Tracking Script with jQuery**
+```javascript
+/**
+ * Required: Data attribute "data-pid" with the ID of the news tag template
+ * Required: Send the POST request to the URL "location.pathname + 'phcv1'"
+ * Required: The POST parameter "pid" with the ID of the template
+ */
+$(function(){
+    if($('a.news_tag').length > 0) {
+        $('a.news_tag').each(function(){
+            var tPID = $(this).data("pid");
+            if(tPID) {
+                $(this).on("click", function(){
+                    $.post(location.pathname + 'phcv1', {pid: tPID});
+                });
+            }
+        });
+    }
+});
+```
+So simply every click on a tag is counted. Including all checks as for automatic tracking. Like Bot Filtering, Sesseion Lifetime, etc.
 
 ### Pros
 - Automatic Page View Tracking
@@ -36,6 +69,7 @@ echo $page->phits;
 - Ability to reset Page Views
 - Works with all admin themes
 - Counter database is created as write-optimized InnoDB
+- API to track events for templates that are not viewable
 - No dependencies on Librarys, pure VanillaJS
 - Works in all modern browsers
 - Pages are sortable by hits
@@ -55,9 +89,13 @@ echo $page->phits;
 - [x] ~~Disable session lifetime, don't store cookies to track every page view~~ (Request by matjazp) `Since version 1.2.1`
 - [x] ~~Option to hide the counter in the page tree~~ (Request by matjazp) `Since version 1.2.1`
 - [x] ~~Option to hide the counter in the page tree on certain templates~~ `Since version 1.2.1`
-- [ ] JavaScript API to track events for templates that are not viewable
+- [X] ~~API to track events for templates that are not viewable~~ `Since version 1.2.2`
 
 ### Changelog
+1.2.2
+- New feature: API to track events for templates that are not viewable
+- Enhancement: Documentation improvement
+
 1.2.1
 - API access to hit values `Use $page->phits`
 - Bug-Fix: No tracking on welcomepage (Reported by wbmnfktr; Thx to matjazp)

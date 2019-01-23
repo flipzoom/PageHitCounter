@@ -39,7 +39,9 @@ class FieldtypePageHitCounter extends Fieldtype {
         return array(
             'title'         => __('Page Hit Counter Selector Field'),
             'summary'       => __('This field is needed to provide page views as selector for sorting.'), 
-            'version'       => 121, 
+            'author'        => 'David Karich - FlipZoom Media Inc.',
+            'href'          => 'https://github.com/FlipZoomMedia/PageHitCounter',
+            'version'       => 122, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6', 'PageHitCounter')
         );
     }
