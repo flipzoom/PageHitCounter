@@ -6,7 +6,7 @@ The Page Hit Counter module for ProcessWire implements a simple page view counte
 
 This gives you a quick overview of how many visitors have read a news or a blog post, for example, without first having to open complex tools such as Google Analytics. This module quickly provides simple information, e.g. for editors. Or, for example, to sort certain news by most page views. For example for "Trending Topics".
 
-Works with `ProCache` and `AdBlockers`. With a lightweight tracking code of only ~400 bytes (gzipped). And no code changes necessary! In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.
+Works with `ProCache` and `AdBlockers`. With a lightweight tracking code of only ~320 bytes (gzipped). And no code changes necessary! In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.
 
 In addition, there are some options, for example filtering IP addresses (for CronJobs) and filtering bots, spiders and crawlers. You can also configure the lifetime of the session cookies. Repeated page views are not counted during this period. It is also possible to exclude certain roles from tracking. For example, logged in editors who work on a page are not counted as page views.
 
@@ -38,7 +38,7 @@ echo $pages->find("template=news_tag, sort=-phits")->each("<a href='{url}' class
 ```javascript
 /**
  * Required: Data attribute "data-pid" with the ID of the news tag template
- * Required: Send the POST request to the URL "location.pathname + 'phcv1'"
+ * Required: Send the POST request to the URL "location.pathname.replace(/\/?$/, '/') + 'phcv1'"
  * Required: The POST parameter "pid" with the ID of the template
  */
 $(function(){
@@ -47,18 +47,18 @@ $(function(){
             var tPID = $(this).data("pid");
             if(tPID) {
                 $(this).on("click", function(){
-                    $.post(location.pathname + 'phcv1', {pid: tPID});
+                    $.post(location.pathname.replace(/\/?$/, '/') + 'phcv1', {pid: tPID});
                 });
             }
         });
     }
 });
 ```
-So simply every click on a tag is counted. Including all checks as for automatic tracking. Like Bot Filtering, Sesseion Lifetime, etc.
+So simply every click on a tag is counted. Including all checks as for automatic tracking. Like Bot Filtering, Session Lifetime, etc.
 
 ### Pros
 - Automatic Page View Tracking
-- Lightweight tracking code, only ~400 bytes (gzipped)
+- Lightweight tracking code, only ~320 bytes (gzipped)
 - No code or frontend changes necessary
 - Works with ProCache! Even if no PHP is executed on the cached page, the tracking works
 - Works with browser AdBlockers
@@ -92,6 +92,12 @@ So simply every click on a tag is counted. Including all checks as for automatic
 - [X] ~~API to track events for templates that are not viewable~~ `Since version 1.2.2`
 
 ### Changelog
+1.2.3
+- Bug-Fix: Tracking script triggers 404 if pages are configured without slash (#3)
+- Enhancement: Reduction of the tracking script size if it's gzipped (~320 bytes)
+- Enhancement: Documentation improvement
+- Enhancement: Corrected few typos
+
 1.2.2
 - New feature: API to track events for templates that are not viewable
 - Enhancement: Documentation improvement

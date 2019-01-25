@@ -53,13 +53,13 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
     public static function getModuleinfo() {
         return array(
             'title'         => __('Page Hit Counter'),
-            'summary'       => __('The Page Hit Counter module implements a simple page view counter. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views. Even if the page is cached. Also works with ProCache and AdBockers. With a lightweight tracking code of 490 bytes (gzipped). In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.'),
+            'summary'       => __('The Page Hit Counter module implements a simple page view counter. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views. Even if the page is cached. Also works with ProCache and AdBockers. With a lightweight tracking code of 320 bytes (gzipped). In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.'),
             'author'        => 'David Karich - FlipZoom Media Inc.',
             'href'          => 'https://github.com/FlipZoomMedia/PageHitCounter',
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 122, 
+            'version'       => 123, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );

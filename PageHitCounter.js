@@ -29,7 +29,7 @@
 
 /**
  * ------------------------------------------------------------------------
- * Define the namespace of the Editor object.
+ * Define the namespace of the tracking object.
  * Self-Executing Anonymous Function: Public & Private.
  * Nice article: http://enterprisejquery.com/2010/10/how-good-c-habits-can-encourage-bad-javascript-habits-part-1/
  * ------------------------------------------------------------------------
@@ -56,7 +56,7 @@
             // ------------------------------------------------------------------------
             if(!isNaN(pid)) {
                 var xhr = new XMLHttpRequest();
-                xhr.open('POST', location.pathname + "phcv1", true);
+                xhr.open('POST', location.pathname.replace(/\/?$/, '/') + "phcv1", true);
                 xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
                 xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
                 xhr.onload = function() {
