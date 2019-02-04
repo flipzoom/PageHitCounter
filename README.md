@@ -70,7 +70,7 @@ So simply every click on a tag is counted. Including all checks as for automatic
 - Works with all admin themes
 - Counter database is created as write-optimized InnoDB
 - API to track events for templates that are not viewable
-- No dependencies on Librarys, pure VanillaJS (Automatic tracking script)
+- No dependencies on libraries, pure VanillaJS (Automatic tracking script)
 - Works in all modern browsers
 - Pages are sortable by hits
 
