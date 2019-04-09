@@ -75,7 +75,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         return array(
             'forTemplates'              => array(), 
             'forAPITemplates'           => array(), 
-            'thousandSeperator'         => '.', 
+            'thousandSeparator'         => '.', 
             'sessionLifetime'           => 1200, 
             'ipFilter'                  => '', 
             'botFilter'                 => 1, 
@@ -146,7 +146,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         if($input->post->submit_save_module) {
             $forTemplates       = (array) $input->post->forTemplates;
             $forAPITemplates    = (array) $input->post->forAPITemplates;
-            $thousandSeperator  = (string) $input->post->thousandSeperator;
+            $thousandSeparator  = (string) $input->post->thousandSeparator;
             $sessionLifetime    = (int) $input->post->sessionLifetime;
             $ipFilter           = (string) $input->post->ipFilter;
             $botFilter          = (int) $input->post->botFilter;
@@ -293,13 +293,13 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // Thousand seperator
             // ------------------------------------------------------------------------
             $field                  = $modules->get("InputfieldText");
-            $field->name            = "thousandSeperator";
-            $field->label           = __("Thousands seperator");
+            $field->name            = "thousandSeparator";
+            $field->label           = __("Thousands separator");
             $field->icon            = "ellipsis-h";
             $field->columnWidth     = '50';
             $field->description     = __("For better readability of numbers, a thousand separator can be defined. This option only has an effect if you have activated the option \"Show counter in page tree\".");
             $field->notes           = __("For example , or . or a space. Only for display in the page tree.");
-            $field->value           = $data['thousandSeperator'];
+            $field->value           = $data['thousandSeparator'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -786,7 +786,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * @return string      Formated counter for admin page tree list
      */
     private function buildPageListHitCounter($number) {
-        $_counter = number_format($number, 0, ',', $this->thousandSeperator);
+        $_counter = number_format($number, 0, ',', $this->thousandSeparator);
         return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') ."'>
                     <span class='pageListHitCounter'>
                         <i class='icon fa fa-fw fa-eye'></i>". $_counter ."
