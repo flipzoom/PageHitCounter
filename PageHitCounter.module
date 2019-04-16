@@ -53,7 +53,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
     public static function getModuleinfo() {
         return array(
             'title'         => __('Page Hit Counter'),
-            'summary'       => __('The Page Hit Counter module implements a simple page view counter. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views. Even if the page is cached. Also works with ProCache and AdBockers. With a lightweight tracking code of 320 bytes (gzipped). In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.'),
+            'summary'       => __('The Page Hit Counter module implements a simple page view counter. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views. Even if the page is cached. Also works with ProCache and AdBlockers. With a lightweight tracking code of 320 bytes (gzipped). In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.'),
             'author'        => 'David Karich - FlipZoom Media Inc.',
             'href'          => 'https://github.com/FlipZoomMedia/PageHitCounter',
             'singular'      => true,
@@ -75,7 +75,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         return array(
             'forTemplates'              => array(), 
             'forAPITemplates'           => array(), 
-            'thousandSeperator'         => '.', 
+            'thousandSeparator'         => '.', 
             'sessionLifetime'           => 1200, 
             'ipFilter'                  => '', 
             'botFilter'                 => 1, 
@@ -120,7 +120,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         $resetResult    = $session->get('resetResult');
 
         // ------------------------------------------------------------------------
-        // Build template array and exlude system templates
+        // Build template array and exclude system templates
         // ------------------------------------------------------------------------
         foreach($pwTemplates as $template) {
             if($template->flags AND Template::flagSystem) continue;
@@ -146,7 +146,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         if($input->post->submit_save_module) {
             $forTemplates       = (array) $input->post->forTemplates;
             $forAPITemplates    = (array) $input->post->forAPITemplates;
-            $thousandSeperator  = (string) $input->post->thousandSeperator;
+            $thousandSeparator  = (string) $input->post->thousandSeparator;
             $sessionLifetime    = (int) $input->post->sessionLifetime;
             $ipFilter           = (string) $input->post->ipFilter;
             $botFilter          = (int) $input->post->botFilter;
@@ -157,7 +157,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $excludeTemplates   = (array) $input->post->excludeTemplates;
 
             // ------------------------------------------------------------------------
-            // Performe counter reset
+            // Perform counter reset
             // ------------------------------------------------------------------------
             if($input->post->resetSelector !== "") {
                 $modules->get("PageHitCounter")->resetPageViews((string) $input->post->resetSelector, (int) $input->post->dryRun);
@@ -212,7 +212,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->columnWidth     = '50';
             $field->required        = 1;
             $field->description     = __("During this period, repeated page views of the same page and by the same visitor are not counted as page view.");
-            $field->notes           = __("Default: 1200s. Corresponds to a liftetime of 20 minutes. If you set the value to 0, no cookie is stored and every page view is counted.");
+            $field->notes           = __("Default: 1200s. Corresponds to a lifetime of 20 minutes. If you set the value to 0, no cookie is stored and every page view is counted.");
             $field->value           = ((int) $data['sessionLifetime'] < 0) ? 1200 : $data['sessionLifetime'];
             $form->add($field);
 
@@ -284,22 +284,22 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->label           = __("Tracking script attributes");
             $field->icon            = "code";
             $field->columnWidth     = '50';
-            $field->description     = __("Add additional atrributs to the tracking script tag. \"defer\" should be included so that the tracking code is not executed until the DOM is ready. This will not block the page rendering.");
+            $field->description     = __("Add additional attributes to the tracking script tag. \"defer\" should be included so that the tracking code is not executed until the DOM is ready. This will not block the page rendering.");
             $field->notes           = __("For example: defer data-myattribute=\"my-value\"");
             $field->value           = $data['customAttributes'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
-            // Thousand seperator
+            // Thousand separator
             // ------------------------------------------------------------------------
             $field                  = $modules->get("InputfieldText");
-            $field->name            = "thousandSeperator";
-            $field->label           = __("Thousands seperator");
+            $field->name            = "thousandSeparator";
+            $field->label           = __("Thousands separator");
             $field->icon            = "ellipsis-h";
             $field->columnWidth     = '50';
             $field->description     = __("For better readability of numbers, a thousand separator can be defined. This option only has an effect if you have activated the option \"Show counter in page tree\".");
             $field->notes           = __("For example , or . or a space. Only for display in the page tree.");
-            $field->value           = $data['thousandSeperator'];
+            $field->value           = $data['thousandSeparator'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -527,7 +527,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                     $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `data` = 0 WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
                     $query  = $database->prepare($sql);
                     $query->execute();
-                    $returnResult = $resultAmount . " " . __("counters have been reseted.");
+                    $returnResult = $resultAmount . " " . __("counters have been reset.");
                 }
 
             // ------------------------------------------------------------------------
@@ -552,7 +552,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
-     * Track pahe view from frontend AJAX call
+     * Track page view from frontend AJAX call
      * ------------------------------------------------------------------------
      * @param  HookEvent $event
      */
@@ -645,7 +645,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         if(!$this->botFilter) return true;
 
         // ------------------------------------------------------------------------
-        // Check Usergent for bot signature
+        // Check User Agent for bot signature
         // ------------------------------------------------------------------------
         if(isset($_SERVER['HTTP_USER_AGENT'])) { 
             $useragent  = $this->sanitizer->text($_SERVER['HTTP_USER_AGENT']);
@@ -658,7 +658,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
-     * Validates and filter IP adress
+     * Validates and filter IP address
      * ------------------------------------------------------------------------
      * @param  string $ip
      * @return boolean
@@ -786,7 +786,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * @return string      Formated counter for admin page tree list
      */
     private function buildPageListHitCounter($number) {
-        $_counter = number_format($number, 0, ',', $this->thousandSeperator);
+        $_counter = number_format($number, 0, ',', $this->thousandSeparator);
         return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') ."'>
                     <span class='pageListHitCounter'>
                         <i class='icon fa fa-fw fa-eye'></i>". $_counter ."
@@ -804,7 +804,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
     public function ___upgrade($fromVersion, $toVersion) {
 
         // ------------------------------------------------------------------------
-        // Rebuild new databse schema, install fieldtype and import old data
+        // Rebuild new database schema, install fieldtype and import old data
         // ------------------------------------------------------------------------
         if($fromVersion <= 110 AND $toVersion <= 121) {
 
