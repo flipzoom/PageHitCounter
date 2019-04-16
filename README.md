@@ -92,8 +92,13 @@ So simply every click on a tag is counted. Including all checks as for automatic
 - [X] ~~API to track events for templates that are not viewable~~ `Since version 1.2.2`
 
 ### Changelog
+1.2.4
+- Bug-Fix: Resetting the counters on system pages (e.g. 404) does not work ([Reported by wbmnfktr](https://processwire.com/talk/topic/20668-page-hit-counter-%E2%80%93-simple-page-view-tracking/page/2/?tab=comments#comment-182214))
+- Bug-Fix: Tracking endpoint is logged as 404 if module "[Jumplinks](http://modules.processwire.com/modules/process-jumplinks/)" is installed ([Reported by wbmnfktr](https://processwire.com/talk/topic/20668-page-hit-counter-%E2%80%93-simple-page-view-tracking/page/2/?tab=comments#comment-182213))
+- Enhancement: Corrected few typos (Merged from Sergio [#6](https://github.com/FlipZoomMedia/PageHitCounter/pull/6) – THX!)
+
 1.2.3
-- Bug-Fix: Tracking script triggers 404 if pages are configured without slash (#3)
+- Bug-Fix: Tracking script triggers 404 if pages are configured without slash ([#3](https://github.com/FlipZoomMedia/PageHitCounter/issues/3))
 - Enhancement: Reduction of the tracking script size if it's gzipped (~320 bytes)
 - Enhancement: Documentation improvement
 - Enhancement: Corrected few typos

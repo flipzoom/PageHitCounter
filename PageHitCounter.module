@@ -59,7 +59,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 123, 
+            'version'       => 124, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );
@@ -424,7 +424,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // Attach hook for AJAX post request tracking
             // ------------------------------------------------------------------------
             if(isset($_SERVER['REQUEST_URI']) AND strlen($_SERVER['REQUEST_URI']) - strlen('/phcv1') === strrpos($_SERVER['REQUEST_URI'], '/phcv1')) {
-                $this->addHookBefore("ProcessPageView::pageNotFound", $this, "trackPageView");
+                $this->addHookBefore("ProcessPageView::pageNotFound", $this, "trackPageView", array("priority" => 5));
             }
         }
     }
@@ -492,7 +492,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // Get page ids from selector
         // ------------------------------------------------------------------------
         $pageSelector   = wire('sanitizer')->text($pageSelector);
-        $pageResults    = wire('pages')->findMany("{$pageSelector}", array('getIds' => true));
+        $pageResults    = wire('pages')->findMany("{$pageSelector}, include=all", array('getIds' => true));
         
         // ------------------------------------------------------------------------
         // If pages found
