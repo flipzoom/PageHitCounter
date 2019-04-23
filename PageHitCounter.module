@@ -59,7 +59,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 124, 
+            'version'       => 125, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );
@@ -696,9 +696,10 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
     private function checkCookie($pageID) {
 
         // ------------------------------------------------------------------------
-        // Do not create cookies if session lifetime is set to 0
+        // Do not create cookies if session lifetime is set to 0 or the 404 page 
+        // is triggered
         // ------------------------------------------------------------------------
-        if((int) $this->sessionLifetime === 0) return true;
+        if((int) $this->sessionLifetime === 0 OR (int) $pageID === (int) $this->config->http404PageID) return true;
 
         // ------------------------------------------------------------------------
         // Get cookie
