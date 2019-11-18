@@ -59,7 +59,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 125, 
+            'version'       => 126, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );
@@ -414,6 +414,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             }
 
             // ------------------------------------------------------------------------
+            // Attach hook to reset counter after cloning a page
+            // ------------------------------------------------------------------------
+            $this->addHookAfter("Pages::cloned", $this, 'resetClonedPageCounter');
+
+            // ------------------------------------------------------------------------
             // Attach hook for automatic tracking script
             // ------------------------------------------------------------------------
             if(wireCount($this->forTemplates) > 0) {
@@ -426,6 +431,32 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             if(isset($_SERVER['REQUEST_URI']) AND strlen($_SERVER['REQUEST_URI']) - strlen('/phcv1') === strrpos($_SERVER['REQUEST_URI'], '/phcv1')) {
                 $this->addHookBefore("ProcessPageView::pageNotFound", $this, "trackPageView", array("priority" => 5));
             }
+        }
+    }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Reset page counter value to 0 off cloned page
+     * ------------------------------------------------------------------------
+     * @param  HookEvent $event
+     */
+    protected function resetClonedPageCounter(HookEvent $event) {
+
+        // ------------------------------------------------------------------------
+        // Init vars
+        // ------------------------------------------------------------------------
+        // Important: The event arguments include both the copied page and the newly 
+        // created page. Don't use $event->arguments('page') as this returns the page 
+        // that is being cloned rather than the cloned copy. Instead use 
+        // $event->arguments(1) which correctly refers to the new copy.
+        // ------------------------------------------------------------------------
+        $clonedPage = $event->arguments(1);
+
+        // ------------------------------------------------------------------------
+        // Reset counter for cloned page
+        // ------------------------------------------------------------------------
+        if($clonedPage->id) {
+            $this->resetPageViews("id={$clonedPage->id}", 0);
         }
     }
 
@@ -477,7 +508,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * @param  string $pageSelector
      * @param  integer $dryRun
      */
-    private function resetPageViews($pageSelector, $dryRun) {
+    public function resetPageViews($pageSelector, $dryRun) {
 
         // ------------------------------------------------------------------------
         // Init vars
