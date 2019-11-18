@@ -22,6 +22,11 @@ To output the page views of a tracked page, use:
 ```php
 echo $page->phits;
 ```
+## Example: Reset counter per API
+```php
+$modules->get("PageHitCounter")->resetPageViews("template=whatever", false);
+```
+
 ## Example: Tracking a page hit via API and jQuery
 If you want to track a template that does not represent a full page to automatically inject a tracking script, you can define allowed API templates in the module that you can track.
 
@@ -96,6 +101,11 @@ If the option "Allow URL Segments" is activated on a template, the hits are only
 - [X] ~~API to track events for templates that are not viewable~~ `Since version 1.2.2`
 
 ### Changelog
+1.2.6
+- Bug-Fix: Set the counter of a cloned page to 0
+- Enhancement: The function for resetting counters is now available in the module as a public function to reset counters via own scripts on the API side (Request by VeiJari)
+- Enhancement: Documentation improvement API reset
+
 1.2.5
 - Bug-Fix: When counting 404 hits, cookies are no longer set. The session lifetime is deactivated for the 404 page
 - Enhancement: Documentation improvement regarding URL segments
