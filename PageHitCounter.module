@@ -59,7 +59,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 126, 
+            'version'       => 127, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );
@@ -817,7 +817,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * @param  int $number Number of views
      * @return string      Formated counter for admin page tree list
      */
-    private function buildPageListHitCounter($number) {
+    public function buildPageListHitCounter($number) {
         $_counter = number_format($number, 0, ',', $this->thousandSeparator);
         return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') ."'>
                     <span class='pageListHitCounter'>

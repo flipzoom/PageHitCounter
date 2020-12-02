@@ -101,6 +101,9 @@ If the option "Allow URL Segments" is activated on a template, the hits are only
 - [X] ~~API to track events for templates that are not viewable~~ `Since version 1.2.2`
 
 ### Changelog
+1.2.7
+- Feature request: make `buildPageListHitCounter`-Function `public` ([Requested by bernhard](https://processwire.com/talk/topic/20668-page-hit-counter-%E2%80%93-simple-page-view-tracking/page/3/?tab=comments#comment-208327))
+
 1.2.6
 - Bug-Fix: Set the counter of a cloned page to 0
 - Enhancement: The function for resetting counters is now available in the module as a public function to reset counters via own scripts on the API side (Request by VeiJari)
