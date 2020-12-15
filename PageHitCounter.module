@@ -77,6 +77,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'forAPITemplates'           => array(), 
             'thousandSeparator'         => '.', 
             'sessionLifetime'           => 1200, 
+            'ignoreURLSegments'         => 0,
             'ipFilter'                  => '', 
             'botFilter'                 => 1, 
             'customAttributes'          => 'defer', 
@@ -148,6 +149,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $forAPITemplates    = (array) $input->post->forAPITemplates;
             $thousandSeparator  = (string) $input->post->thousandSeparator;
             $sessionLifetime    = (int) $input->post->sessionLifetime;
+            $ignoreURLSegments  = (int) $input->post->ignoreURLSegments;
             $ipFilter           = (string) $input->post->ipFilter;
             $botFilter          = (int) $input->post->botFilter;
             $customAttributes   = (string) $input->post->customAttributes;
@@ -217,6 +219,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $form->add($field);
 
             // ------------------------------------------------------------------------
+            // Ignore URL segments
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "ignoreURLSegments";
+            $field->label           = __("Ignore URL segments");
+            $field->checkboxLabel   = __("Ignore URL segments");
+            $field->icon            = "chain";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['ignoreURLSegments']) ? 'checked' : '';
+            $field->description     = __("If a template has URL segments configured, each hit on a different segment is counted as a new hit. Enable \"Ignore URL segments\" so that dynamic segments are not counted individually on the base template / page.");
+            $field->notes           = __("Please note the information about [URL segments](https://github.com/FlipZoomMedia/PageHitCounter#notice-tracking-with-url-segments).");
+            $field->value           = $data['ignoreURLSegments'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
             // Show counter in backend
             // ------------------------------------------------------------------------
             $field                  = $modules->get("InputfieldCheckbox");
@@ -239,7 +256,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->label           = __("Exclude templates for page tree counter");
             $field->showIf          = "showForBackend=1";
             $field->icon            = "cubes";
-            $field->columnWidth     = '100';
+            $field->columnWidth     = '50';
             $field->description     = __("Define here the templates for which no counter should be displayed explicitly in the page tree.");
             $field->notes           = __("The tracking still works and you have access to the field \"phits\".");
             foreach($templates as $template) $field->addOption($template->name);
@@ -741,7 +758,16 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // If no cookie exist, create it and return true for tracking
         // ------------------------------------------------------------------------
         if($cookie === NULL) {
-            setcookie(self::PHCCOOKIE . $pageID, 1, time() + $this->sessionLifetime);
+
+            // ------------------------------------------------------------------------
+            // Set base path
+            // ------------------------------------------------------------------------
+            $basePath = ($this->ignoreURLSegments === 1) ? '/' : '';
+
+            // ------------------------------------------------------------------------
+            // Set cookie
+            // ------------------------------------------------------------------------
+            setcookie(self::PHCCOOKIE . $pageID, 1, time() + $this->sessionLifetime, $basePath);
             return true;
 
         // ------------------------------------------------------------------------
