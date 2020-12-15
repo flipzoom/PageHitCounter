@@ -39,10 +39,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
-     * Define cookie name
+     * Define cookie / session name
      * ------------------------------------------------------------------------
      */
     const PHCCOOKIE         = 'phc-';
+    const PHCSESSION        = 'phcs-';
 
     /**
      * ------------------------------------------------------------------------
@@ -76,6 +77,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'forTemplates'              => array(), 
             'forAPITemplates'           => array(), 
             'thousandSeparator'         => '.', 
+            'cookielessTracking'        => 0,
             'sessionLifetime'           => 1200, 
             'ignoreURLSegments'         => 0,
             'ipFilter'                  => '', 
@@ -118,6 +120,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         $pwTemplates    = wire('templates');
         $pwRoles        = wire('roles');
         $session        = wire('session');
+        $config         = wire('config');
         $resetResult    = $session->get('resetResult');
 
         // ------------------------------------------------------------------------
@@ -148,6 +151,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $forTemplates       = (array) $input->post->forTemplates;
             $forAPITemplates    = (array) $input->post->forAPITemplates;
             $thousandSeparator  = (string) $input->post->thousandSeparator;
+            $cookielessTracking = (int) $input->post->cookielessTracking;
             $sessionLifetime    = (int) $input->post->sessionLifetime;
             $ignoreURLSegments  = (int) $input->post->ignoreURLSegments;
             $ipFilter           = (string) $input->post->ipFilter;
@@ -205,6 +209,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $form->add($field);
 
             // ------------------------------------------------------------------------
+            // Cookieless tracking
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "cookielessTracking";
+            $field->label           = __("Use cookieless tracking (Experimentell)");
+            $field->checkboxLabel   = __("Use cookieless tracking");
+            $field->icon            = "user-secret";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['cookielessTracking']) ? 'checked' : '';
+            $field->description     = __("Enable this option to not use cookies for tracking or if you have many different pages you want to track. The limit for cookies is 50 per domain for all cookies on the page. If the option is enabled, PHP session storage is used. Downside: you can't set the lifetime higher than configured in your PHP.ini and the session will be terminated as soon as the browser is closed.");
+            $field->notes           = __("The lifetime of your PHP session (session.gc_maxlifetime) is configured to ". ini_get('session.gc_maxlifetime') ." seconds. The only cookie used is the default ProcessWire session cookie \"". $config->sessionName ."\".");
+            $field->value           = $data['cookielessTracking'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
             // Session lifetime for counting
             // ------------------------------------------------------------------------
             $field                  = $modules->get("InputfieldText");
@@ -213,9 +232,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->icon            = "clock-o";
             $field->columnWidth     = '50';
             $field->required        = 1;
-            $field->description     = __("During this period, repeated page views of the same page and by the same visitor are not counted as page view.");
+            $field->description     = __("During this period, repeated page views of the same page and by the same visitor are not counted as page view. Please note, if you use \"Cookieless tracking\", then the lifetime behavior is different and depends on your PHP.ini configuration. Also, the storage is not persistent and is cleared when you close the browser.");
             $field->notes           = __("Default: 1200s. Corresponds to a lifetime of 20 minutes. If you set the value to 0, no cookie is stored and every page view is counted.");
-            $field->value           = ((int) $data['sessionLifetime'] < 0) ? 1200 : $data['sessionLifetime'];
+
+                // ------------------------------------------------------------------------
+                // Check lifetime values depending on the tracking method used
+                // ------------------------------------------------------------------------
+                if($data['cookielessTracking'] === 1) {
+                    if((int) $data['sessionLifetime'] < 0) $lifetime = 1200;
+                    elseif((int) $data['sessionLifetime'] > ini_get('session.gc_maxlifetime')) $lifetime = (int) ini_get('session.gc_maxlifetime');
+                    else $lifetime = (int) $data['sessionLifetime'];
+                } else {
+                    $lifetime = ((int) $data['sessionLifetime'] < 0) ? 1200 : $data['sessionLifetime'];
+                }
+
+            $field->value           = $lifetime;
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -256,7 +287,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->label           = __("Exclude templates for page tree counter");
             $field->showIf          = "showForBackend=1";
             $field->icon            = "cubes";
-            $field->columnWidth     = '50';
+            $field->columnWidth     = '100';
             $field->description     = __("Define here the templates for which no counter should be displayed explicitly in the page tree.");
             $field->notes           = __("The tracking still works and you have access to the field \"phits\".");
             foreach($templates as $template) $field->addOption($template->name);
@@ -652,7 +683,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             // Check for session lifetime
             // ------------------------------------------------------------------------
-            if(!$this->checkCookie($pageID)) exit();
+            if(!$this->checkSession($pageID)) exit();
 
             // ------------------------------------------------------------------------
             // Build SQL query
@@ -752,45 +783,132 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
-     * Check cookie and lifetime for page view
+     * Check session/cookie and lifetime for page view
      * ------------------------------------------------------------------------
      * @param  int    $pageID
      * @return boolean
      */
-    private function checkCookie($pageID) {
+    private function checkSession($pageID) {
 
         // ------------------------------------------------------------------------
-        // Do not create cookies if session lifetime is set to 0 or the 404 page 
+        // Do not create cookies/session if lifetime is set to 0 or the 404 page 
         // is triggered
         // ------------------------------------------------------------------------
         if((int) $this->sessionLifetime === 0 OR (int) $pageID === (int) $this->config->http404PageID) return true;
 
         // ------------------------------------------------------------------------
-        // Get cookie
+        // Use cookieless tracking method
         // ------------------------------------------------------------------------
-        $cookie = $this->input->cookie(self::PHCCOOKIE . $pageID);
-
-        // ------------------------------------------------------------------------
-        // If no cookie exist, create it and return true for tracking
-        // ------------------------------------------------------------------------
-        if($cookie === NULL) {
+        if($this->cookielessTracking === 1) {
 
             // ------------------------------------------------------------------------
-            // Set base path
+            // Get session
             // ------------------------------------------------------------------------
-            $basePath = ($this->ignoreURLSegments === 1) ? '/' : '';
+            $userSession    = $this->session->get(self::PHCSESSION . $pageID);
 
             // ------------------------------------------------------------------------
-            // Set cookie
+            // Init base path of request and remove language-specific segments 
+            // from the request. This way, page views that are only called in another 
+            // language are not counted as a new hit
             // ------------------------------------------------------------------------
-            setcookie(self::PHCCOOKIE . $pageID, 1, time() + $this->sessionLifetime, $basePath);
-            return true;
+            $pagePath       = $this->sanitizer->entities($this->pages->get($pageID)->path);
+            $basePath       = $this->sanitizer->entities($this->input->url());
+            $basePath       = substr($basePath, 0, -strlen('phcv1'));
+            $basePath       = strstr($basePath, $pagePath);
+            $basePathIndex  = md5($basePath);
+
+            // ------------------------------------------------------------------------
+            // If no session exist, create it and return true for tracking
+            // ------------------------------------------------------------------------
+            if($userSession === NULL) {
+                $userSession                            = [];
+                $userSession['urls'][$basePathIndex]    = time() + $this->sessionLifetime;
+                $userSession['lifetime']                = time() + $this->sessionLifetime;
+                $this->session->set(self::PHCSESSION . $pageID, $userSession);
+
+                return true;
+
+            // ------------------------------------------------------------------------
+            // If session is present, but "ignore URL segements" is deactivated, 
+            // check for current request
+            // ------------------------------------------------------------------------
+            } elseif($userSession !== NULL AND $this->ignoreURLSegments !== 1) {
+
+                // ------------------------------------------------------------------------
+                // Path is not yet in the array or the lifetime since the last hit has 
+                // already expired, then count a hit
+                // ------------------------------------------------------------------------
+                if(!isset($userSession['urls'][$basePathIndex]) OR 
+                   (isset($userSession['urls'][$basePathIndex]) AND $userSession['urls'][$basePathIndex] < time())) {
+                    
+                    // ------------------------------------------------------------------------
+                    // Update session data and save it
+                    // ------------------------------------------------------------------------
+                    $userSession['urls'][$basePathIndex] = time() + $this->sessionLifetime;
+                    $this->session->set(self::PHCSESSION . $pageID, $userSession);
+                    
+                    return true;
+
+                // ------------------------------------------------------------------------
+                // Else return false for do not track the hit
+                // ------------------------------------------------------------------------
+                } else {
+                    return false;
+                }
+
+            // ------------------------------------------------------------------------
+            // The "Ignore URL segments" function is enabled, just check the session 
+            // lifetime. If it has expired, count another hit
+            // ------------------------------------------------------------------------
+            } elseif($userSession !== NULL AND $this->ignoreURLSegments === 1 AND $userSession['lifetime'] < time()) {
+
+                // ------------------------------------------------------------------------
+                // Update session data and save it
+                // ------------------------------------------------------------------------
+                $userSession['lifetime'] = time() + $this->sessionLifetime;
+                $this->session->set(self::PHCSESSION . $pageID, $userSession);
+
+                return true;
+
+            // ------------------------------------------------------------------------
+            // Else return false for do not track the hit
+            // ------------------------------------------------------------------------
+            } else {
+                return false;
+            }
 
         // ------------------------------------------------------------------------
-        // Else return false for do not track the hit
+        // Use cookie based tracking method
         // ------------------------------------------------------------------------
         } else {
-            return false;
+
+            // ------------------------------------------------------------------------
+            // Get cookie
+            // ------------------------------------------------------------------------
+            $cookie = $this->input->cookie(self::PHCCOOKIE . $pageID);
+
+            // ------------------------------------------------------------------------
+            // If no cookie exist, create it and return true for tracking
+            // ------------------------------------------------------------------------
+            if($cookie === NULL) {
+
+                // ------------------------------------------------------------------------
+                // Set base path
+                // ------------------------------------------------------------------------
+                $basePath = ($this->ignoreURLSegments === 1) ? '/' : '';
+
+                // ------------------------------------------------------------------------
+                // Set cookie
+                // ------------------------------------------------------------------------
+                setcookie(self::PHCCOOKIE . $pageID, 1, time() + $this->sessionLifetime, $basePath);
+                return true;
+
+            // ------------------------------------------------------------------------
+            // Else return false for do not track the hit
+            // ------------------------------------------------------------------------
+            } else {
+                return false;
+            }
         }
     }
 
