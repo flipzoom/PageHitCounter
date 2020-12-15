@@ -667,6 +667,12 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                 $query->bindValue(':page_id', $pageID);
                 $query->execute();
 
+                // ------------------------------------------------------------------------
+                // Call hookable method after view was tracked
+                // ------------------------------------------------------------------------
+                // @by Bernhard Baumrock
+                $this->pageViewTracked($pageID);
+
             } catch(Exception $e) {
                 $this->log->error($e->getMessage());
                 exit();
@@ -678,6 +684,16 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         exit();
     }
+
+    /**
+     * ------------------------------------------------------------------------
+     * Hookable method to execute code after pageview was tracked
+     * ------------------------------------------------------------------------
+     * @param  integer $pageID Tracked page ID
+     * @return void
+     * @by Bernhard Baumrock
+     */
+    public function ___pageViewTracked($pageID) {}
 
     /**
      * ------------------------------------------------------------------------
