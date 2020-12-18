@@ -1,14 +1,15 @@
 <?php namespace ProcessWire;
 
 /**
- * @author  FlipZoom Media Inc. - David Karich
+ * @author  flipzoom; Media - David Karich
  * @contact David Karich <david.karich@flipzoom.de>
  * @website www.flipzoom.de
  * @create  2019-01-10
+ * @updated 2020-12-18
  * @style   Tab size: 4 / Soft tabs: YES
  * ----------------------------------------------------------------------------------
  * @licence
- * Copyright (c) 2019 FlipZoom Media Inc. - David Karich
+ * Copyright (c) 2019 flipzoom; Media - David Karich
  * Permission is hereby granted, free of charge, to any person obtaining a copy 
  * of this software and associated documentation files (the "Software"), to deal 
  * in the Software without restriction, including without limitation the rights 
@@ -55,12 +56,12 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         return array(
             'title'         => __('Page Hit Counter'),
             'summary'       => __('The Page Hit Counter module implements a simple page view counter. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views. Even if the page is cached. Also works with ProCache and AdBlockers. With a lightweight tracking code of 320 bytes (gzipped). In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.'),
-            'author'        => 'David Karich - FlipZoom Media Inc.',
+            'author'        => 'David Karich - flipzoom; Media',
             'href'          => 'https://github.com/FlipZoomMedia/PageHitCounter',
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 127, 
+            'version'       => 200, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );
@@ -688,7 +689,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             // Build SQL query
             // ------------------------------------------------------------------------
-            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`pages_id`, `data`) VALUES (:page_id, 1) ON DUPLICATE KEY UPDATE `data` = data + 1;";
+            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`pages_id`, `data`, `last_hit`) VALUES (:page_id, 1, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE `data` = data + 1, `last_hit` = CURRENT_TIMESTAMP;";
 
             // ------------------------------------------------------------------------
             // Execute SQL
@@ -967,19 +968,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Else get hits and return event
         // ------------------------------------------------------------------------
-        $event->return = $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME)) . $event->return;
+        $event->return = $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME), $page->lastPageHit) . $event->return;
     }
 
     /**
      * ------------------------------------------------------------------------
      * Formats the counter for the admin page tree.
      * ------------------------------------------------------------------------
-     * @param  int $number Number of views
-     * @return string      Formated counter for admin page tree list
+     * @param  int $number  Number of views
+     * @param  int $lastHit Timestamp of last page view
+     * @return string       Formated counter for admin page tree list
      */
-    public function buildPageListHitCounter($number) {
+    public function buildPageListHitCounter($number, $lastHit = NULL) {
+        $_lastHit = ($lastHit !== NULL OR !empty($lastHit)) ? ' ' . $this->_('Last viewed on:') . ' ' . $this->datetime->date('relative', $lastHit) . ' (' . $this->datetime->date('', $lastHit) . ')' : '';
         $_counter = number_format($number, 0, ',', $this->thousandSeparator);
-        return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') ."'>
+        return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') . $_lastHit . "'>
                     <span class='pageListHitCounter'>
                         <i class='icon fa fa-fw fa-eye'></i>". $_counter ."
                     </span>
@@ -1054,6 +1057,15 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // Delete old DB
             // ------------------------------------------------------------------------
             $sql    = "DROP TABLE `modules_hit_counter`;";
+            $query  = $this->database->prepare($sql);
+            $query->execute();
+        }
+
+        // ------------------------------------------------------------------------
+        // Change database schema, add 'last_hit' column to field table
+        // ------------------------------------------------------------------------
+        if($fromVersion < 200 AND $toVersion == 200) {
+            $sql = "ALTER TABLE `". self::PHCDBTABLE ."` ADD `last_hit` DATETIME NULL DEFAULT NULL AFTER `data`;";
             $query  = $this->database->prepare($sql);
             $query->execute();
         }

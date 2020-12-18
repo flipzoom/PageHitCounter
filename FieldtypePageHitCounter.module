@@ -5,10 +5,11 @@
  * @contact David Karich <david.karich@flipzoom.de>
  * @website www.flipzoom.de
  * @create  2019-01-16
+ * @update  2020-12-18
  * @style   Tab size: 4 / Soft tabs: YES
  * ----------------------------------------------------------------------------------
  * @licence
- * Copyright (c) 2019 FlipZoom Media Inc. - David Karich
+ * Copyright (c) 2019 flipzoom; Media - David Karich
  * Permission is hereby granted, free of charge, to any person obtaining a copy 
  * of this software and associated documentation files (the "Software"), to deal 
  * in the Software without restriction, including without limitation the rights 
@@ -39,9 +40,9 @@ class FieldtypePageHitCounter extends Fieldtype {
         return array(
             'title'         => __('Page Hit Counter Selector Field'),
             'summary'       => __('This field is needed to provide page views as selector for sorting.'), 
-            'author'        => 'David Karich - FlipZoom Media Inc.',
+            'author'        => 'David Karich - flipzoom; Media',
             'href'          => 'https://github.com/FlipZoomMedia/PageHitCounter',
-            'version'       => 122, 
+            'version'       => 123, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6', 'PageHitCounter')
         );
     }
@@ -72,6 +73,28 @@ class FieldtypePageHitCounter extends Fieldtype {
 
     /**
      * ------------------------------------------------------------------------
+     * Set field data from DB entries on wakeup
+     * ------------------------------------------------------------------------
+     * @param  Page   $page
+     * @param  Field  $field
+     * @param  Mixed  $value
+     * @return Integer
+     */
+    public function ___wakeupValue(Page $page, Field $field, $value) {
+
+        // ------------------------------------------------------------------------
+        // Set dynamic property of last hit timestamp
+        // ------------------------------------------------------------------------
+        $page->set('lastPageHit', $value['last_hit']);
+
+        // ------------------------------------------------------------------------
+        // Return counter value as basic data property
+        // ------------------------------------------------------------------------
+        return (int) $value['data'];
+    }
+
+    /**
+     * ------------------------------------------------------------------------
      * Return database schema on install
      * ------------------------------------------------------------------------
      * @param  Field  $field 
@@ -81,6 +104,7 @@ class FieldtypePageHitCounter extends Fieldtype {
         $charset                    = $this->wire('config')->dbCharset;
         $schema                     = parent::getDatabaseSchema($field);
         $schema['data']             = "int UNSIGNED DEFAULT 0";
+        $schema['last_hit']         = "datetime NULL DEFAULT NULL";
         $schema['xtra']['append']   = "ENGINE=InnoDB DEFAULT CHARSET=$charset";
         return $schema;
     }
