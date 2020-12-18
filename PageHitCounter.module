@@ -731,6 +731,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
      * ------------------------------------------------------------------------
      * Check UserAgent for bot, spider and crawler signature
      * ------------------------------------------------------------------------
+     * @see https://github.com/mitchellkrogza/nginx-ultimate-bad-bot-blocker/blob/master/_generator_lists/bad-user-agents.list
      * @return boolean
      */
     private function checkBot() {
