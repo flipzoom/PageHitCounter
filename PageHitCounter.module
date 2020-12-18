@@ -604,7 +604,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                 // ------------------------------------------------------------------------
                 } else {
 
-                    $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `data` = 0 WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
+                    $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `data` = 0, `last_hit` = NULL WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
                     $query  = $database->prepare($sql);
                     $query->execute();
                     $returnResult = $resultAmount . " " . __("counters have been reset.");
