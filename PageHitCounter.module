@@ -1,14 +1,14 @@
 <?php namespace ProcessWire;
 
 /**
- * @author  FlipZoom Media Inc. - David Karich
+ * @author  flipzoom; Media - David Karich
  * @contact David Karich <david.karich@flipzoom.de>
  * @website www.flipzoom.de
- * @create  2019-01-10
+ * @create  2021-02-09
  * @style   Tab size: 4 / Soft tabs: YES
  * ----------------------------------------------------------------------------------
  * @licence
- * Copyright (c) 2019 FlipZoom Media Inc. - David Karich
+ * Copyright (c) 2021 flipzoom; Media - David Karich
  * Permission is hereby granted, free of charge, to any person obtaining a copy 
  * of this software and associated documentation files (the "Software"), to deal 
  * in the Software without restriction, including without limitation the rights 
@@ -39,10 +39,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
-     * Define cookie name
+     * Define cookie / session name
      * ------------------------------------------------------------------------
      */
     const PHCCOOKIE         = 'phc-';
+    const PHCSESSION        = 'phcs-';
 
     /**
      * ------------------------------------------------------------------------
@@ -54,12 +55,12 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         return array(
             'title'         => __('Page Hit Counter'),
             'summary'       => __('The Page Hit Counter module implements a simple page view counter. Page views of visitors are automatically tracked on defined templates, with monitoring of multiple page views. Even if the page is cached. Also works with ProCache and AdBlockers. With a lightweight tracking code of 320 bytes (gzipped). In addition GDPR compliant, since no personal data or IP addresses are stored. Only session cookies are stored without information.'),
-            'author'        => 'David Karich - FlipZoom Media Inc.',
+            'author'        => 'David Karich - flipzoom; Media',
             'href'          => 'https://github.com/FlipZoomMedia/PageHitCounter',
             'singular'      => true,
             'autoload'      => true,
             'icon'          => 'eye', 
-            'version'       => 127, 
+            'version'       => 200, 
             'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6'), 
             'installs'      => array('FieldtypePageHitCounter')
         );
@@ -76,7 +77,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'forTemplates'              => array(), 
             'forAPITemplates'           => array(), 
             'thousandSeparator'         => '.', 
+            'cookielessTracking'        => 0,
             'sessionLifetime'           => 1200, 
+            'ignoreURLSegments'         => 0,
             'ipFilter'                  => '', 
             'botFilter'                 => 1, 
             'customAttributes'          => 'defer', 
@@ -117,6 +120,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         $pwTemplates    = wire('templates');
         $pwRoles        = wire('roles');
         $session        = wire('session');
+        $config         = wire('config');
         $resetResult    = $session->get('resetResult');
 
         // ------------------------------------------------------------------------
@@ -147,7 +151,9 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $forTemplates       = (array) $input->post->forTemplates;
             $forAPITemplates    = (array) $input->post->forAPITemplates;
             $thousandSeparator  = (string) $input->post->thousandSeparator;
+            $cookielessTracking = (int) $input->post->cookielessTracking;
             $sessionLifetime    = (int) $input->post->sessionLifetime;
+            $ignoreURLSegments  = (int) $input->post->ignoreURLSegments;
             $ipFilter           = (string) $input->post->ipFilter;
             $botFilter          = (int) $input->post->botFilter;
             $customAttributes   = (string) $input->post->customAttributes;
@@ -203,6 +209,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $form->add($field);
 
             // ------------------------------------------------------------------------
+            // Cookieless tracking
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "cookielessTracking";
+            $field->label           = __("Use cookieless tracking (Experimental)");
+            $field->checkboxLabel   = __("Use cookieless tracking");
+            $field->icon            = "user-secret";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['cookielessTracking']) ? 'checked' : '';
+            $field->description     = __("Enable this option to not use cookies for tracking or if you have many different pages you want to track. The limit for cookies is 50 per domain for all cookies on the page. If the option is enabled, PHP session storage is used. Downside: you can't set the lifetime higher than configured in your PHP.ini and the session will be terminated as soon as the browser is closed.");
+            $field->notes           = __("The lifetime of your PHP session (session.gc_maxlifetime) is configured to ". ini_get('session.gc_maxlifetime') ." seconds. The only cookie used is the default ProcessWire session cookie \"". $config->sessionName ."\".");
+            $field->value           = $data['cookielessTracking'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
             // Session lifetime for counting
             // ------------------------------------------------------------------------
             $field                  = $modules->get("InputfieldText");
@@ -211,9 +232,36 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->icon            = "clock-o";
             $field->columnWidth     = '50';
             $field->required        = 1;
-            $field->description     = __("During this period, repeated page views of the same page and by the same visitor are not counted as page view.");
+            $field->description     = __("During this period, repeated page views of the same page and by the same visitor are not counted as page view. Please note, if you use \"Cookieless tracking\", then the lifetime behavior is different and depends on your PHP.ini configuration. Also, the storage is not persistent and is cleared when you close the browser.");
             $field->notes           = __("Default: 1200s. Corresponds to a lifetime of 20 minutes. If you set the value to 0, no cookie is stored and every page view is counted.");
-            $field->value           = ((int) $data['sessionLifetime'] < 0) ? 1200 : $data['sessionLifetime'];
+
+                // ------------------------------------------------------------------------
+                // Check lifetime values depending on the tracking method used
+                // ------------------------------------------------------------------------
+                if($data['cookielessTracking'] === 1) {
+                    if((int) $data['sessionLifetime'] < 0) $lifetime = 1200;
+                    elseif((int) $data['sessionLifetime'] > ini_get('session.gc_maxlifetime')) $lifetime = (int) ini_get('session.gc_maxlifetime');
+                    else $lifetime = (int) $data['sessionLifetime'];
+                } else {
+                    $lifetime = ((int) $data['sessionLifetime'] < 0) ? 1200 : $data['sessionLifetime'];
+                }
+
+            $field->value           = $lifetime;
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Ignore URL segments
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "ignoreURLSegments";
+            $field->label           = __("Ignore URL segments");
+            $field->checkboxLabel   = __("Ignore URL segments");
+            $field->icon            = "chain";
+            $field->columnWidth     = '50';
+            $field->checked         = ($data['ignoreURLSegments']) ? 'checked' : '';
+            $field->description     = __("If a template has URL segments configured, each hit on a different segment is counted as a new hit. Enable \"Ignore URL segments\" so that dynamic segments are not counted individually on the base template / page.");
+            $field->notes           = __("Please note the information about [URL segments](https://github.com/FlipZoomMedia/PageHitCounter#notice-tracking-with-url-segments).");
+            $field->value           = $data['ignoreURLSegments'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -555,7 +603,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                 // ------------------------------------------------------------------------
                 } else {
 
-                    $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `data` = 0 WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
+                    $sql    = "UPDATE `". self::PHCDBTABLE ."` SET `data` = 0, `last_hit` = NULL WHERE `pages_id` IN ({$ids}) AND `data` > 0;";
                     $query  = $database->prepare($sql);
                     $query->execute();
                     $returnResult = $resultAmount . " " . __("counters have been reset.");
@@ -635,12 +683,12 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             // Check for session lifetime
             // ------------------------------------------------------------------------
-            if(!$this->checkCookie($pageID)) exit();
+            if(!$this->checkSession($pageID)) exit();
 
             // ------------------------------------------------------------------------
             // Build SQL query
             // ------------------------------------------------------------------------
-            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`pages_id`, `data`) VALUES (:page_id, 1) ON DUPLICATE KEY UPDATE `data` = data + 1;";
+            $sql    = "INSERT INTO `". self::PHCDBTABLE ."` (`pages_id`, `data`, `last_hit`) VALUES (:page_id, 1, CURRENT_TIMESTAMP) ON DUPLICATE KEY UPDATE `data` = data + 1, `last_hit` = CURRENT_TIMESTAMP;";
 
             // ------------------------------------------------------------------------
             // Execute SQL
@@ -649,6 +697,12 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
                 $query = $this->database->prepare($sql);
                 $query->bindValue(':page_id', $pageID);
                 $query->execute();
+
+                // ------------------------------------------------------------------------
+                // Call hookable method after view was tracked
+                // ------------------------------------------------------------------------
+                // @by Bernhard Baumrock
+                $this->pageViewTracked($pageID);
 
             } catch(Exception $e) {
                 $this->log->error($e->getMessage());
@@ -664,8 +718,19 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
+     * Hookable method to execute code after pageview was tracked
+     * ------------------------------------------------------------------------
+     * @param  integer $pageID Tracked page ID
+     * @return void
+     * @by Bernhard Baumrock
+     */
+    public function ___pageViewTracked($pageID) {}
+
+    /**
+     * ------------------------------------------------------------------------
      * Check UserAgent for bot, spider and crawler signature
      * ------------------------------------------------------------------------
+     * @see https://github.com/mitchellkrogza/nginx-ultimate-bad-bot-blocker/blob/master/_generator_lists/bad-user-agents.list
      * @return boolean
      */
     private function checkBot() {
@@ -719,36 +784,132 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
 
     /**
      * ------------------------------------------------------------------------
-     * Check cookie and lifetime for page view
+     * Check session/cookie and lifetime for page view
      * ------------------------------------------------------------------------
      * @param  int    $pageID
      * @return boolean
      */
-    private function checkCookie($pageID) {
+    private function checkSession($pageID) {
 
         // ------------------------------------------------------------------------
-        // Do not create cookies if session lifetime is set to 0 or the 404 page 
+        // Do not create cookies/session if lifetime is set to 0 or the 404 page 
         // is triggered
         // ------------------------------------------------------------------------
         if((int) $this->sessionLifetime === 0 OR (int) $pageID === (int) $this->config->http404PageID) return true;
 
         // ------------------------------------------------------------------------
-        // Get cookie
+        // Use cookieless tracking method
         // ------------------------------------------------------------------------
-        $cookie = $this->input->cookie(self::PHCCOOKIE . $pageID);
+        if($this->cookielessTracking === 1) {
+
+            // ------------------------------------------------------------------------
+            // Get session
+            // ------------------------------------------------------------------------
+            $userSession    = $this->session->get(self::PHCSESSION . $pageID);
+
+            // ------------------------------------------------------------------------
+            // Init base path of request and remove language-specific segments 
+            // from the request. This way, page views that are only called in another 
+            // language are not counted as a new hit
+            // ------------------------------------------------------------------------
+            $pagePath       = $this->sanitizer->entities($this->pages->get($pageID)->path);
+            $basePath       = $this->sanitizer->entities($this->input->url());
+            $basePath       = substr($basePath, 0, -strlen('phcv1'));
+            $basePath       = strstr($basePath, $pagePath);
+            $basePathIndex  = md5($basePath);
+
+            // ------------------------------------------------------------------------
+            // If no session exist, create it and return true for tracking
+            // ------------------------------------------------------------------------
+            if($userSession === NULL) {
+                $userSession                            = [];
+                $userSession['urls'][$basePathIndex]    = time() + $this->sessionLifetime;
+                $userSession['lifetime']                = time() + $this->sessionLifetime;
+                $this->session->set(self::PHCSESSION . $pageID, $userSession);
+
+                return true;
+
+            // ------------------------------------------------------------------------
+            // If session is present, but "ignore URL segements" is deactivated, 
+            // check for current request
+            // ------------------------------------------------------------------------
+            } elseif($userSession !== NULL AND $this->ignoreURLSegments !== 1) {
+
+                // ------------------------------------------------------------------------
+                // Path is not yet in the array or the lifetime since the last hit has 
+                // already expired, then count a hit
+                // ------------------------------------------------------------------------
+                if(!isset($userSession['urls'][$basePathIndex]) OR 
+                   (isset($userSession['urls'][$basePathIndex]) AND $userSession['urls'][$basePathIndex] < time())) {
+                    
+                    // ------------------------------------------------------------------------
+                    // Update session data and save it
+                    // ------------------------------------------------------------------------
+                    $userSession['urls'][$basePathIndex] = time() + $this->sessionLifetime;
+                    $this->session->set(self::PHCSESSION . $pageID, $userSession);
+                    
+                    return true;
+
+                // ------------------------------------------------------------------------
+                // Else return false for do not track the hit
+                // ------------------------------------------------------------------------
+                } else {
+                    return false;
+                }
+
+            // ------------------------------------------------------------------------
+            // The "Ignore URL segments" function is enabled, just check the session 
+            // lifetime. If it has expired, count another hit
+            // ------------------------------------------------------------------------
+            } elseif($userSession !== NULL AND $this->ignoreURLSegments === 1 AND $userSession['lifetime'] < time()) {
+
+                // ------------------------------------------------------------------------
+                // Update session data and save it
+                // ------------------------------------------------------------------------
+                $userSession['lifetime'] = time() + $this->sessionLifetime;
+                $this->session->set(self::PHCSESSION . $pageID, $userSession);
+
+                return true;
+
+            // ------------------------------------------------------------------------
+            // Else return false for do not track the hit
+            // ------------------------------------------------------------------------
+            } else {
+                return false;
+            }
 
         // ------------------------------------------------------------------------
-        // If no cookie exist, create it and return true for tracking
-        // ------------------------------------------------------------------------
-        if($cookie === NULL) {
-            setcookie(self::PHCCOOKIE . $pageID, 1, time() + $this->sessionLifetime);
-            return true;
-
-        // ------------------------------------------------------------------------
-        // Else return false for do not track the hit
+        // Use cookie based tracking method
         // ------------------------------------------------------------------------
         } else {
-            return false;
+
+            // ------------------------------------------------------------------------
+            // Get cookie
+            // ------------------------------------------------------------------------
+            $cookie = $this->input->cookie(self::PHCCOOKIE . $pageID);
+
+            // ------------------------------------------------------------------------
+            // If no cookie exist, create it and return true for tracking
+            // ------------------------------------------------------------------------
+            if($cookie === NULL) {
+
+                // ------------------------------------------------------------------------
+                // Set base path
+                // ------------------------------------------------------------------------
+                $basePath = ($this->ignoreURLSegments === 1) ? '/' : '';
+
+                // ------------------------------------------------------------------------
+                // Set cookie
+                // ------------------------------------------------------------------------
+                setcookie(self::PHCCOOKIE . $pageID, 1, time() + $this->sessionLifetime, $basePath);
+                return true;
+
+            // ------------------------------------------------------------------------
+            // Else return false for do not track the hit
+            // ------------------------------------------------------------------------
+            } else {
+                return false;
+            }
         }
     }
 
@@ -807,19 +968,21 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Else get hits and return event
         // ------------------------------------------------------------------------
-        $event->return = $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME)) . $event->return;
+        $event->return = $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME), $page->lastPageHit) . $event->return;
     }
 
     /**
      * ------------------------------------------------------------------------
      * Formats the counter for the admin page tree.
      * ------------------------------------------------------------------------
-     * @param  int $number Number of views
-     * @return string      Formated counter for admin page tree list
+     * @param  int $number  Number of views
+     * @param  int $lastHit Timestamp of last page view
+     * @return string       Formated counter for admin page tree list
      */
-    public function buildPageListHitCounter($number) {
+    public function buildPageListHitCounter($number, $lastHit = NULL) {
+        $_lastHit = ($lastHit !== NULL OR !empty($lastHit)) ? ' ' . $this->_('Last viewed on:') . ' ' . $this->datetime->date('relative', $lastHit) . ' (' . $this->datetime->date('', $lastHit) . ')' : '';
         $_counter = number_format($number, 0, ',', $this->thousandSeparator);
-        return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') ."'>
+        return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') . $_lastHit . "'>
                     <span class='pageListHitCounter'>
                         <i class='icon fa fa-fw fa-eye'></i>". $_counter ."
                     </span>
@@ -894,6 +1057,15 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // Delete old DB
             // ------------------------------------------------------------------------
             $sql    = "DROP TABLE `modules_hit_counter`;";
+            $query  = $this->database->prepare($sql);
+            $query->execute();
+        }
+
+        // ------------------------------------------------------------------------
+        // Change database schema, add 'last_hit' column to field table
+        // ------------------------------------------------------------------------
+        if($fromVersion < 200 AND $toVersion == 200) {
+            $sql = "ALTER TABLE `". self::PHCDBTABLE ."` ADD `last_hit` DATETIME NULL DEFAULT NULL AFTER `data`;";
             $query  = $this->database->prepare($sql);
             $query->execute();
         }
