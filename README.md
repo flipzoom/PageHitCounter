@@ -64,6 +64,15 @@ So simply every click on a tag is counted. Including all checks as for automatic
 ## Notice: Tracking with URL segments
 If the option "Allow URL Segments" is activated on a template, the hits are only counted if the base URL of the page is called. If you want the hit to be counted even when a segment is requested, you MUST configure the segments in the template configuration. How to do this [can be found here](https://processwire.com/docs/admin/setup/templates/#which-url-segments-do-you-want-to-allow). If you use dynamic segments, configure them as RegEx. There is currently no other option. The problem is that the Page Hit Counter hooked into the PageNotFound process. If URL segments are allowed but not defined, a 404 is never triggered. This means that the Page Hit Counter cannot be called.
 
+## New since 2.0.0: Ignore URL segments
+If a template has URL segments configured, each hit on a different segment is counted as a new hit. Enable "Ignore URL segments" so that dynamic segments are not counted individually on the base template / page.
+
+## New since 2.0.0: Use cookieless tracking (Experimentell)
+Enable this option to not use individual cookies for tracking or if you have many different pages you want to track. The limit for cookies is 50 per domain for all cookies on the page. If the option is enabled, PHP session storage is used. Downside: you can't set the lifetime higher than configured in your PHP.ini and the session will be terminated as soon as the browser is closed.
+
+## Upgrade note for 2.0.0 from previous versions!
+Version 2.0.0 requires an update in the database schema, so that additionally the date of the last access / hit on the page can be displayed (`$page->lastPageHit`). To make this possible, you have to do the update via the upgrade module, upload the ZIP itself and do an update directly via the backend or do a module refresh directly after the upload. If you do not do this, you will get an error that a column is missing in the database table.
+
 ### Pros
 - Automatic Page View Tracking
 - Lightweight tracking code, only ~320 bytes (gzipped)
@@ -99,8 +108,20 @@ If the option "Allow URL Segments" is activated on a template, the hits are only
 - [x] ~~Option to hide the counter in the page tree~~ (Request by matjazp) `Since version 1.2.1`
 - [x] ~~Option to hide the counter in the page tree on certain templates~~ `Since version 1.2.1`
 - [X] ~~API to track events for templates that are not viewable~~ `Since version 1.2.2`
+- [X] ~~Cookieless tracking~~ `Since version 2.0.0`
+- [X] ~~Show last hit~~ `Since version 2.0.0`
+- [x] ~~Ignore URL segments~~ (Request by bernhard) `Since version 2.0.0`
+- [x] ~~Add hookable method after pageview was tracked~~ (Request by bernhard) `Since version 2.0.0`
 
 ### Changelog
+2.0.0
+- Feature request: Add hookable method after pageview was tracked (`___pageViewTracked($pageID)`) ([Requested by bernhard](https://processwire.com/talk/profile/2137-bernhard/))
+- Feature request: Ignore URL segments option ([Requested by bernhard](https://processwire.com/talk/profile/2137-bernhard/))
+- New: Cookieless tracking
+- New: Show date of last hit
+- Update: Botlist
+- Enhancement: Documentation improvement
+
 1.2.7
 - Feature request: make `buildPageListHitCounter`-Function `public` ([Requested by bernhard](https://processwire.com/talk/topic/20668-page-hit-counter-%E2%80%93-simple-page-view-tracking/page/3/?tab=comments#comment-208327))
 
