@@ -213,7 +213,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             $field                  = $modules->get("InputfieldCheckbox");
             $field->name            = "cookielessTracking";
-            $field->label           = __("Use cookieless tracking (Experimentell)");
+            $field->label           = __("Use cookieless tracking (Experimental)");
             $field->checkboxLabel   = __("Use cookieless tracking");
             $field->icon            = "user-secret";
             $field->columnWidth     = '50';

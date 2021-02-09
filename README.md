@@ -67,7 +67,7 @@ If the option "Allow URL Segments" is activated on a template, the hits are only
 ## New since 2.0.0: Ignore URL segments
 If a template has URL segments configured, each hit on a different segment is counted as a new hit. Enable "Ignore URL segments" so that dynamic segments are not counted individually on the base template / page.
 
-## New since 2.0.0: Use cookieless tracking (Experimentell)
+## New since 2.0.0: Use cookieless tracking (Experimental)
 Enable this option to not use individual cookies for tracking or if you have many different pages you want to track. The limit for cookies is 50 per domain for all cookies on the page. If the option is enabled, PHP session storage is used. Downside: you can't set the lifetime higher than configured in your PHP.ini and the session will be terminated as soon as the browser is closed.
 
 ## Upgrade note for 2.0.0 from previous versions!
