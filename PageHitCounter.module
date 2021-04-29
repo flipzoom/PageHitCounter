@@ -456,7 +456,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             // Show counter in page tree
             // ------------------------------------------------------------------------
-            if($this->showForBackend) {
+            if($this->showForBackend AND $this->wire->input->get('mode') != 'select') {
                 $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
                 wire('config')->styles->add($this->config->urls->PageHitCounter . 'PageHitCounter.min.css');
             }
