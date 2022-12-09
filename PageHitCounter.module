@@ -85,6 +85,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             'customAttributes'          => 'defer', 
             'forRoles'                  => array(), 
             'showForBackend'            => 1,
+            'placeAfter'                => 0,
             'ipValidation'              => 1, 
             'excludeTemplates'          => array()
         );
@@ -159,6 +160,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $customAttributes   = (string) $input->post->customAttributes;
             $forRoles           = (array) $input->post->forRoles;
             $showForBackend     = (int) $input->post->showForBackend;
+            $placeAfter         = (int) $input->post->placeAfter;
             $ipValidation       = (int) $input->post->ipValidation;
             $excludeTemplates   = (array) $input->post->excludeTemplates;
 
@@ -272,11 +274,26 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             $field->label           = __("Show counter in page tree");
             $field->checkboxLabel   = __("Show counter");
             $field->icon            = "eye";
-            $field->columnWidth     = '50';
+            $field->columnWidth     = '25';
             $field->checked         = ($data['showForBackend']) ? 'checked' : '';
             $field->description     = __("Should a counter be displayed in the admin page tree?");
             $field->notes           = __("You can also output the counter yourself with the field name \"phits\".");
             $field->value           = $data['showForBackend'];
+            $form->add($field);
+
+            // ------------------------------------------------------------------------
+            // Place after page title
+            // ------------------------------------------------------------------------
+            $field                  = $modules->get("InputfieldCheckbox");
+            $field->name            = "placeAfter";
+            $field->label           = __("Place counter after page title");
+            $field->checkboxLabel   = __("Place after");
+            $field->showIf          = "showForBackend=1";
+            $field->icon            = "align-right";
+            $field->columnWidth     = '25';
+            $field->checked         = ($data['placeAfter']) ? 'checked' : '';
+            $field->description     = __("Should the counter be placed after the page title in the admin page tree?");
+            $field->value           = $data['placeAfter'];
             $form->add($field);
 
             // ------------------------------------------------------------------------
@@ -456,7 +473,7 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
             // ------------------------------------------------------------------------
             // Show counter in page tree
             // ------------------------------------------------------------------------
-            if($this->showForBackend) {
+            if($this->showForBackend AND $this->wire->input->get('mode') != 'select') {
                 $this->addHookAfter('ProcessPageListRender::getPageLabel', $this, 'addPageListHitCounter');
                 wire('config')->styles->add($this->config->urls->PageHitCounter . 'PageHitCounter.min.css');
             }
@@ -968,7 +985,11 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
         // ------------------------------------------------------------------------
         // Else get hits and return event
         // ------------------------------------------------------------------------
-        $event->return = $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME), $page->lastPageHit) . $event->return;
+        if($this->placeAfter){
+            $event->return = $event->return . $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME), $page->lastPageHit) ;
+        } else {
+            $event->return = $this->buildPageListHitCounter((int) $page->get(self::PHCFIELDNAME), $page->lastPageHit) . $event->return;
+        }
     }
 
     /**
@@ -982,7 +1003,8 @@ class PageHitCounter extends WireData implements Module, ConfigurableModule {
     public function buildPageListHitCounter($number, $lastHit = NULL) {
         $_lastHit = ($lastHit !== NULL OR !empty($lastHit)) ? ' ' . $this->_('Last viewed on:') . ' ' . $this->datetime->date('relative', $lastHit) . ' (' . $this->datetime->date('', $lastHit) . ')' : '';
         $_counter = number_format($number, 0, ',', $this->thousandSeparator);
-        return "<div class='pageListHitCounterWrapper' title='". $_counter . " " . $this->_('people have viewed this page.') . $_lastHit . "'>
+        $_afterClass = ($this->placeAfter) ? ' pageListHitCounterWrapper_after' : '';
+        return "<div class='pageListHitCounterWrapper". $_afterClass . "' title='". $_counter . " " . $this->_('people have viewed this page.') . $_lastHit . "'>
                     <span class='pageListHitCounter'>
                         <i class='icon fa fa-fw fa-eye'></i>". $_counter ."
                     </span>
