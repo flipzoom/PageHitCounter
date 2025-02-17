@@ -3,10 +3,10 @@
  * @contact David Karich <david.karich@flipzoom.de>
  * @website www.flipzoom.de
  * @create  2021-02-09
- * @style   Tab size: 4 / Soft tabs: YES
+ * @updated 2025-02-14
  * ----------------------------------------------------------------------------------
  * @licence
- * Copyright (c) 2021 flipzoom; Media - David Karich
+ * Copyright (c) 2025 flipzoom; Media - David Karich
  * Permission is hereby granted, free of charge, to any person obtaining a copy 
  * of this software and associated documentation files (the "Software"), to deal 
  * in the Software without restriction, including without limitation the rights 
@@ -23,6 +23,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * ----------------------------------------------------------------------------------
+ *
  */
 
 "use strict";

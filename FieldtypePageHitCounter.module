@@ -5,10 +5,10 @@
  * @contact David Karich <david.karich@flipzoom.de>
  * @website www.flipzoom.de
  * @create  2021-02-09
- * @style   Tab size: 4 / Soft tabs: YES
+ * @updated 2025-02-14
  * ----------------------------------------------------------------------------------
  * @licence
- * Copyright (c) 2021 flipzoom; Media - David Karich
+ * Copyright (c) 2025 flipzoom; Media - David Karich
  * Permission is hereby granted, free of charge, to any person obtaining a copy 
  * of this software and associated documentation files (the "Software"), to deal 
  * in the Software without restriction, including without limitation the rights 
@@ -25,6 +25,7 @@
  * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE 
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * ----------------------------------------------------------------------------------
+ *
  */
 
 class FieldtypePageHitCounter extends Fieldtype {
@@ -40,9 +41,9 @@ class FieldtypePageHitCounter extends Fieldtype {
             'title'         => __('Page Hit Counter Selector Field'),
             'summary'       => __('This field is needed to provide page views as selector for sorting.'), 
             'author'        => 'David Karich - flipzoom; Media',
-            'href'          => 'https://github.com/FlipZoomMedia/PageHitCounter',
-            'version'       => 123, 
-            'requires'      => array('ProcessWire>=3.0.80', 'PHP>=5.6', 'PageHitCounter')
+            'href'          => 'https://github.com/flipzoom/PageHitCounter',
+            'version'       => 201, 
+            'requires'      => array('ProcessWire>=3.0.80', 'PHP>=7.1', 'PageHitCounter')
         );
     }
 
@@ -84,12 +85,16 @@ class FieldtypePageHitCounter extends Fieldtype {
         // ------------------------------------------------------------------------
         // Set dynamic property of last hit timestamp
         // ------------------------------------------------------------------------
-        $page->set('lastPageHit', $value['last_hit']);
+        if(isset($value['last_hit'])) {
+            $page->set('lastPageHit',  $value['last_hit']);
+        }
 
         // ------------------------------------------------------------------------
         // Return counter value as basic data property
         // ------------------------------------------------------------------------
-        return (int) $value['data'];
+        if(isset($value['data'])) {
+            return $value['data'];
+        }
     }
 
     /**
@@ -105,6 +110,7 @@ class FieldtypePageHitCounter extends Fieldtype {
         $schema['data']             = "int UNSIGNED DEFAULT 0";
         $schema['last_hit']         = "datetime NULL DEFAULT NULL";
         $schema['xtra']['append']   = "ENGINE=InnoDB DEFAULT CHARSET=$charset";
+        $schema['xtra']['all']      = false; // Prevent the fieldtype being versioned
         return $schema;
     }
 }
