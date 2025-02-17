@@ -114,6 +114,11 @@ Version 2.0.0 requires an update in the database schema, so that additionally th
 - [x] ~~Add hookable method after pageview was tracked~~ (Request by bernhard) `Since version 2.0.0`
 
 ### Changelog
+2.0.1
+- Enhancement: Prevents versioning when using the PagesVersions module
+- Bug-Fix: PHP 8.3+ fixings
+- Update: Botlist
+
 2.0.0
 - Feature request: Add hookable method after pageview was tracked (`___pageViewTracked($pageID)`) ([Requested by bernhard](https://processwire.com/talk/profile/2137-bernhard/))
 - Feature request: Ignore URL segments option ([Requested by bernhard](https://processwire.com/talk/profile/2137-bernhard/))
